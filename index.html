@@ -1,0 +1,726 @@
+
+
+  
+
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial; margin: 10px; }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      font-size: 1.15rem;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #888;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+
+    .position select,
+    .position input {
+      font-size: 1.1rem;
+      padding: 8px 10px;
+    }
+
+    .position { 
+      margin-bottom: 10px; 
+      padding: 10px; 
+      background: #f3f3f3; 
+      border-radius: 6px; 
+      border-color: #000000;
+      border-width: 1px;
+      border-style: solid;
+    }
+    
+    button { margin-top: 5px; }
+
+    /* Make Submit Order button large and prominent */
+    #submitOrderBtn {
+      background-color: #28a745;  /* green */
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 3px 4px rgba(0,0,0,0.2);
+      transition: transform 0.1s, background-color 0.2s;
+    }
+
+    #submitOrderBtn:hover {
+      background-color: #218838;
+      transform: scale(1.03);
+    }
+
+  /* ---- MODAL BACKDROP ---- */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(3px);
+  }
+
+  /* ---- MODAL BOX ---- */
+  .modal-content {
+    background: white;
+    padding: 5px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    font-size: 0.85rem;
+  }
+
+  .modal-text {
+    max-height: 800px;
+    overflow-y: auto;
+    background: #f6f6f6;
+    white-space: pre-wrap;
+    font-family: monospace;
+
+    font-size: 0.85rem;   /* smaller text */
+    font-weight: bold; /* bold text */
+}
+
+  /* ---- BUTTONS ---- */
+  .modal-buttons {
+    text-align: right;
+  }
+
+  .cancel-btn,
+  .confirm-btn {
+    padding: 10px 18px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+  }
+
+  .cancel-btn {
+    background: #cccccc;
+    margin-right: 10px;
+  }
+
+  .confirm-btn {
+    background: #28a745;
+    color: white;
+  }
+
+  /* Make spinner arrows larger */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    transform: scale(1.4);
+  }
+
+  /* Your existing styling */
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    font-size: 1.15rem;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #888;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+  }
+
+  .position select,
+  .position input {
+    font-size: 1.1rem;
+    padding: 8px 10px;
+  }
+  </style>
+</head>
+
+<body>
+
+<script>
+
+  let items = [];
+  let positions = [];
+  let accounts = [];
+  let pendingOrderData = null;
+
+  // Load items from Google Sheets
+  google.script.run.withSuccessHandler(function(data) {
+    items = data;
+    document.getElementById("addItemBtn").disabled = false;
+    addPosition();   // Add first position automatically
+  }).getAllItems();
+
+  google.script.run.withSuccessHandler(function(data) {
+    accounts = data;
+    addAccaunts();
+  }).getAllAccounts();
+
+//----------------------------------------------------------------------------------------------
+  function addAccaunts() {
+    const container = document.getElementById('accounts');
+    const select = document.createElement('select');
+    select.id = "payment_select";
+    select.style.width = "100%";   // enlarge width
+    select.style.fontSize = "1.1rem"; 
+    select.style.padding = "8px";
+
+    // --- Add placeholder ---
+    let placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    placeholder.textContent = "Оберіть спосіб оплати...";
+    select.appendChild(placeholder);
+
+    accounts.forEach(a => {
+      let opt = document.createElement("option");
+      opt.value = a.label;
+      opt.textContent = a.label;
+      select.appendChild(opt);
+    });
+
+    container.appendChild(select);
+  }
+
+//----------------------------------------------------------------------------------------------
+// Add a new item position block
+//----------------------------------------------------------------------------------------------
+  function addPosition() {
+    const container = document.getElementById('positions');
+    const index = positions.length;
+    positions.push({});
+
+    const div = document.createElement('div');
+    div.className = "position";
+    div.id = "pos_" + index;
+
+    div.innerHTML = `
+      <label>Артикул:</label><br>
+      <select id="item_${index}" onchange="onChangeArticul(${index})">
+        ${items.map((i, idx) =>
+          `<option value="${i.id}"
+            item-idx="${idx}"
+            item-name="${i.name}"
+            bare-price="${i.bare_price}"
+            default-price="${i.default_price}"
+            price-rule='${i.price_rule ? JSON.stringify(i.price_rule) : ""}'>
+            ${i.label}
+          </option>`
+        ).join('')}
+      </select><br><br>
+
+      <label>Кількість:</label><br>
+      <input id="count_${index}" type="number" value="1" oninput="updatePurchaseCount(${index})"><br><br>
+      
+      <label>Ціна одиниці товару:</label><br>
+      <!-- <input id="input-suggested-price_${index}" oninput="overrideSuggestedPrice(${index})" type="number" step="0.01" value="0"> -->
+      
+      <input 
+        id="input-suggested-price_${index}" 
+        type="number" 
+        step="any" 
+        value="0"
+        oninput="overrideSuggestedPrice(${index})" 
+        onkeydown="this.dataset.lastValue=this.value" 
+        onwheel="this.blur()" 
+        onfocusout="normalizeStep(this)"
+      >
+      <br>
+      <label id="item-price-orig_${index}" style="font-size: 0.8rem; font-weight: bold; color: darkred;"></label>
+      <br><br>
+
+      <label>Загальна ціна позиції:</label><br>
+      <input 
+          id="price_${index}" 
+          oninput="overrideFinalPrice(${index})" 
+          type="number" 
+          step="any" 
+          value="0"
+          onkeydown="this.dataset.lastValue=this.value" 
+          onwheel="this.blur()" 
+          onfocusout="normalizeStep(this)"
+          ><br>
+      <label id="price_original_${index}" style="font-size: 0.8rem; font-weight: bold; color: darkred;"></label><br><br>
+
+      <label style="font-size: 0.8rem; font-weight: bold;">Прибуток:</label>
+      <label id="profit_price_${index}" type="number" value="0" style="font-size: 0.8rem; font-weight: bold;" readonly></label><br><br>
+
+      <label style="font-size: 0.8rem; font-weight: bold; color: darkblue;">Залишок:</label>
+      <label id="count-avail_${index}" style="font-size: 0.8rem; font-weight: bold; color: darkblue;"></label><br>
+
+      <button onclick="removePosition(${index})">- Remove</button>
+    `;
+
+    container.appendChild(div);
+    updatePrice(index);
+  }
+
+//----------------------------------------------------------------------------------------------
+//
+//----------------------------------------------------------------------------------------------
+  function onChangeArticul(index){
+    document.getElementById(`count_${index}`).value = 1;
+
+    updatePrice(index);
+    updateCounts();
+  }
+
+//----------------------------------------------------------------------------------------------
+//
+//----------------------------------------------------------------------------------------------
+  function overrideSuggestedPrice(index) {
+
+    const default_price = getDefaultItemPrice(index);
+    const new_item_price = document.getElementById(`input-suggested-price_${index}`).value;
+
+    if (default_price != new_item_price){
+      document.getElementById(`item-price-orig_${index}`).innerText = " ціну за одиницю змінено:" + String(default_price) + " грн.";
+    } else {
+      document.getElementById(`item-price-orig_${index}`).innerText = "";
+    }
+    
+    recalculatePosition(index);
+    updateTotalOrder();
+  }
+
+//----------------------------------------------------------------------------------------------
+  function updatePurchaseCount(index) {
+    updatePrice(index);
+    recalculatePosition(index);
+  }
+
+//----------------------------------------------------------------------------------------------
+// Calculate price for position
+//----------------------------------------------------------------------------------------------
+  function updatePrice(index) {
+    const default_price = getDefaultItemPrice(index);
+
+    //document.getElementById(`curr-price_${index}`).innerText = "  x " + String(pricePerUnit) + " грн.";
+
+    document.getElementById(`item-price-orig_${index}`).innerText = "";
+    document.getElementById(`price_original_${index}`).innerText = "";
+
+    let elSuggestedPrc = document.getElementById(`input-suggested-price_${index}`);
+    elSuggestedPrc.value = parseFloat(default_price);
+
+    recalculatePosition(index);
+    updateTotalOrder();
+    updateCounts();
+  }
+
+  //----------------------------------------------------------------------------------------------
+  function recalculatePosition(index) {
+    const count = Number(document.getElementById(`count_${index}`).value);
+
+    let elSuggestedPrc = document.getElementById(`input-suggested-price_${index}`);
+
+    let pricePerUnit = parseFloat(elSuggestedPrc.value);
+
+    const sel = document.getElementById(`item_${index}`);
+    const barePrice = parseFloat(sel.options[sel.selectedIndex].getAttribute("bare-price"));
+
+    const total = pricePerUnit * count;
+    document.getElementById(`price_${index}`).value = total;
+
+    const profit = total - (count * barePrice);
+    let elProfitPrice = document.getElementById(`profit_price_${index}`)
+    elProfitPrice.innerText = String(profit) + " грн.";
+    elProfitPrice.setAttribute('profit-price', profit);
+
+    const default_total = getDefaultPositionPrice(index);
+
+    if (total != default_total){
+      document.getElementById(`price_original_${index}`).innerText = " ціну змінено:" + String(default_total) + " грн.";
+    } else {
+      document.getElementById(`price_original_${index}`).innerText = "";
+    }
+  }
+
+  //----------------------------------------------------------------------------------------------
+  function updateCounts() {
+    items.forEach(it => {
+      it.count_remains = Number(it.count_available);
+    });
+
+    positions.forEach((p, index) => {
+        if (p !== null) {
+          const sel = document.getElementById("item_" + index);
+          if (!sel) return; // not present in DOM
+          const opt = sel.options[sel.selectedIndex];
+          let item_idx = Number(opt.getAttribute('item-idx'));
+
+          if (isNaN(item_idx)) return;
+          
+          let order_count = Number(document.getElementById("count_" + index).value) || 0;
+          items[item_idx].count_remains = (items[item_idx].count_remains || 0) - order_count;
+          document.getElementById("count-avail_" + index).innerText = String(items[item_idx].count_remains) + " шт.";
+        }
+    });
+  }
+
+//----------------------------------------------------------------------------------------------
+//
+//----------------------------------------------------------------------------------------------
+  function overrideFinalPrice(index) {
+
+    const sel = document.getElementById(`item_${index}`);
+    const barePrice = parseFloat(sel.options[sel.selectedIndex].getAttribute("bare-price"));
+
+    const total = getDefaultPositionPrice(index);
+    const new_total = document.getElementById(`price_${index}`).value;
+
+    if (total != new_total){
+      document.getElementById(`price_original_${index}`).innerText = " ціну змінено: " + total.toFixed(2) + " грн.";
+    } else {
+      document.getElementById(`price_original_${index}`).innerText = "";
+    }
+
+    updateProfit(index);
+    updateTotalOrder();
+  }
+
+//----------------------------------------------------------------------------------------------
+  function updatePriceDiff(index) {
+    const total = getDefaultPositionPrice(index);
+    const new_total = document.getElementById(`price_${index}`).value;
+
+    if (total != new_total){
+      document.getElementById(`price_original_${index}`).innerText = " ціну змінено: " + total.toFixed(2) + " грн.";
+    } else {
+      document.getElementById(`price_original_${index}`).innerText = "";
+    }
+  }
+
+//----------------------------------------------------------------------------------------------
+  function updateProfit(index) {
+    const sel = document.getElementById(`item_${index}`);
+    const count = Number(document.getElementById(`count_${index}`).value);
+    const barePrice = parseFloat(sel.options[sel.selectedIndex].getAttribute("bare-price"));
+
+    const new_total = document.getElementById(`price_${index}`).value;
+    
+    const profit = new_total - (count * barePrice);
+
+    let elProfitPrice = document.getElementById(`profit_price_${index}`);
+    elProfitPrice.innerText = profit.toFixed(2) + " грн.";
+    elProfitPrice.setAttribute('profit-price', profit);
+  }
+
+//----------------------------------------------------------------------------------------------
+  function getPositionCount(index) { 
+    const count = Number(document.getElementById(`count_${index}`).value);
+    return count;
+  }
+
+//----------------------------------------------------------------------------------------------
+  function getDefaultItemPrice(index) {
+    const count = Number(document.getElementById(`count_${index}`).value);
+    const sel = document.getElementById(`item_${index}`);
+    const defaultPrice = parseFloat(sel.options[sel.selectedIndex].getAttribute("default-price"));
+    const ruleRaw = sel.options[sel.selectedIndex].getAttribute("price-rule");
+    
+    let pricePerUnit = defaultPrice;
+    
+    if (ruleRaw) {
+      try {
+        const rule = JSON.parse(ruleRaw);
+        pricePerUnit = calcByRule(count, rule, defaultPrice);
+      } catch (e) {}
+    }
+
+    return pricePerUnit;
+  }
+
+//----------------------------------------------------------------------------------------------
+  function getDefaultPositionPrice(index) {
+    return getDefaultItemPrice(index) * getPositionCount(index);
+  }
+
+//----------------------------------------------------------------------------------------------
+// Price rule calculator
+//----------------------------------------------------------------------------------------------
+  function calcByRule(count, rule, defaultPrice) {
+    for (let r of rule) {
+      if (count >= r.min && count < r.max) return r.price;
+    }
+    return defaultPrice;
+  }
+
+//----------------------------------------------------------------------------------------------
+// Update TOTAL order price
+//----------------------------------------------------------------------------------------------
+  function updateTotalOrder() {
+    let total = 0;
+    positions.forEach((p, index) => {
+      if (p !== null) {
+        const v = parseFloat(document.getElementById(`price_${index}`).value);
+        total += v;
+      }
+    });
+
+    document.getElementById("order_total").innerText = total + " грн";
+  }
+
+//----------------------------------------------------------------------------------------------
+// Remove position block
+//----------------------------------------------------------------------------------------------
+  function removePosition(index) {
+    document.getElementById("pos_" + index).remove();
+    positions[index] = null;
+    updateTotalOrder();
+    updateCounts();
+  }
+
+//----------------------------------------------------------------------------------------------
+// Reset form
+//----------------------------------------------------------------------------------------------
+function resetForm() {
+  document.getElementById('client-info').value = "";
+  document.getElementById('notes').value = "";
+  document.getElementById('positions').innerHTML = "";
+  positions = [];
+  pendingOrderData = null;
+
+  addPosition(); // start with a new blank position
+  updateTotalOrder();
+}
+
+//----------------------------------------------------------------------------------------------
+// Submit order to Google Sheets
+//----------------------------------------------------------------------------------------------
+  /*function submitOrder() {
+    const final_positions = [];
+
+    let total_price = 0;
+
+    positions.forEach((p, index) => {
+      if (p !== null) {
+        const sel = document.getElementById(`item_${index}`);
+
+        if (!sel) { 
+          console.log("[submitOrder] Error: selected element is null");
+          return; // not present in DOM
+        }
+
+        const count = Number(document.getElementById("count_" + index).value);
+        const pos_price = Number(document.getElementById("price_" + index).value);
+        const profit = Number(document.getElementById("profit_price_" + index).getAttribute("profit-price"));
+
+        final_positions.push({
+          item_id: document.getElementById("item_" + index).value,
+          item_name: sel.options[sel.selectedIndex].getAttribute("item-name"),
+          count: count,
+          pos_price: pos_price,
+          profit: profit,
+          bare_price: sel.options[sel.selectedIndex].getAttribute('bare-price')
+        });
+
+        total_price += pos_price;
+      }
+    });
+
+    if (final_positions.length == 0){
+      console.log("[submitOrder] Error: No order data");
+      return;
+    }
+
+    const payment = document.getElementById("payment_select").value;
+
+    let client_info = document.getElementById('client-info').value + "\n" + 
+                      "TTH:\n\n";
+
+    const data = {
+      client_info: client_info,
+      payment: payment,
+      notes: document.getElementById('notes').value,
+      total_price: total_price,
+      positions: final_positions
+    };
+    
+    google.script.run.withSuccessHandler(function(response) {
+      // This runs after the row is added
+      alert(response);        // e.g., show success message
+      resetForm();            // optionally clear form
+    }).addOrder(data);
+  }*/
+
+//----------------------------------------------------------------------------------------------
+// Submit order with Confirmation to Google Sheets
+//----------------------------------------------------------------------------------------------
+
+function submitOrderConfirm() {
+  const final_positions = [];
+  let total_price = 0;
+
+  const paySel = document.getElementById("payment_select");
+  if (!paySel.value) {
+    alert("Будь ласка, оберіть спосіб оплати.");
+    return;
+  }
+
+  positions.forEach((p, index) => {
+    if (p !== null) {
+      const sel = document.getElementById(`item_${index}`);
+      if (!sel) return;
+
+      const count = Number(document.getElementById(`count_${index}`).value);
+      const pos_price = Number(document.getElementById(`price_${index}`).value);
+      const profit = Number(document.getElementById(`profit_price_${index}`).getAttribute("profit-price"));
+
+      final_positions.push({
+        item_id: sel.value,
+        item_name: sel.options[sel.selectedIndex].getAttribute("item-name"),
+        count: count,
+        pos_price: pos_price,
+        profit: profit,
+        bare_price: sel.options[sel.selectedIndex].getAttribute("bare-price")
+      });
+
+      total_price += pos_price;
+    }
+  });
+
+  if (final_positions.length === 0) return;
+
+  const payment = document.getElementById("payment_select").value;
+
+  let client_info = 
+    document.getElementById('client-info').value + "\n" +
+    "TTH:\n";
+
+  // Save for confirmation step
+  pendingOrderData = {
+    client_info: client_info,
+    payment: payment,
+    notes: document.getElementById('notes').value,
+    total_price: total_price,
+    positions: final_positions
+  };
+
+  // Format text for popup
+  let text = "ПОЗИЦІЇ:\n\n";
+  final_positions.forEach(p => {
+    text += `• ${p.item_name} — ${p.count} шт. — ${p.pos_price} грн\n`;
+  });
+
+  text += `\nЗАГАЛОМ: ${total_price} грн\n\n`;
+  text += "---------------------------------------\n";
+  text += client_info;
+  text += "Оплата: " + document.getElementById("payment_select").value + '\n\n';
+
+  document.getElementById("confirmText").innerText = text;
+  document.getElementById("confirmModal").style.display = "block";
+}
+
+//----------------------------------------------------------------------------------------------
+function closeModal() {
+  document.getElementById("confirmModal").style.display = "none";
+}
+
+//----------------------------------------------------------------------------------------------
+function confirmSubmit() {
+  const confirmBtn = document.querySelector(".confirm-btn");
+  confirmBtn.disabled = true;
+  confirmBtn.innerText = "Processing...";
+
+  document.getElementById("addItemBtn").disabled = true;
+
+  google.script.run.withSuccessHandler(function(response) {
+    
+      // Load items from Google Sheets
+    google.script.run.withSuccessHandler(function(data) {
+
+      closeModal();
+      alert(response);
+      resetForm();
+      confirmBtn.disabled = false;
+      confirmBtn.innerText = "Підтвердити";
+
+      items = data;
+      document.getElementById("addItemBtn").disabled = false;
+      document.getElementById('positions').replaceChildren();
+
+      const select = document.getElementById('payment_select');
+      select.selectedIndex = 0; // selects the first option (placeholder)
+
+      addPosition();   // Add first position automatically
+    }).getAllItems();
+
+  }).withFailureHandler(function(error) {
+    alert("Error adding order: " + error.message);
+    confirmBtn.disabled = false;
+    confirmBtn.innerText = "Підтвердити";
+  }).addOrder(pendingOrderData);
+}
+
+//----------------------------------------------------------------------------------------------
+function normalizeStep(input) {
+  // Round to nearest integer if changed via spinner
+  const parsed = parseFloat(input.value);
+  if (!isNaN(parsed)) {
+    const lastValue = parseFloat(input.dataset.lastValue);
+    if (Number.isInteger(parsed)) {
+      input.value = parsed; // spinner used → integer
+    } else {
+      input.value = parsed; // typed decimal → keep as is
+    }
+  }
+}
+
+</script>
+
+  <h2>Нове замовлення</h2>
+
+  <label>Дані покупця</label><br>
+  <textarea id="client-info" style="width:100%; height:90px; resize:vertical;"></textarea><br><br>
+
+  <!--
+  <label>Покупець</label><br>
+  <input id="client-name" type="text" style="width:100%"><br><br>
+
+  <label>Телефон</label><br>
+  <input id="phone" type="text" style="width:100%"><br><br>
+-->
+  
+
+  <label>Примітка</label><br>
+  <input id="notes" type="text" style="width:100%"><br><br>
+
+  <label>Оплата</label><br>
+  <div id="accounts"></div>
+
+  <h3>Позиції:</h3>
+
+  <div id="positions"></div>
+
+  <button id="addItemBtn" onclick="addPosition()" disabled>+ Add Item</button>
+
+  <h3>Загальна ціна замовлення: <br><span id="order_total">0 грн</span></h3>
+
+  <br>
+  <button id="submitOrderBtn" onclick="submitOrderConfirm()">Submit Order</button>
+
+  <!-- ===================== CONFIRMATION MODAL ===================== -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <h2>Підтвердіть замовлення</h2>
+      <div id="confirmText" class="modal-text"></div>
+
+      <div class="modal-buttons">
+        <button class="cancel-btn" onclick="closeModal()">Скасувати</button>
+        <button class="confirm-btn" onclick="confirmSubmit()">Підтвердити</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

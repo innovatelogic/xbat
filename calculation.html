@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial; padding: 20px;">
+
+  <style>
+  .cancel-btn,
+  .confirm-btn {
+    padding: 10px 18px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+  }
+
+  .cancel-btn {
+    background: #cccccc;
+    margin-right: 10px;
+  }
+
+  .confirm-btn {
+    background: #28a745;
+    color: white;
+  }
+</style>
+
+<script>
+  // Receive backets JSON from GS
+  const backets = JSON.parse(<?= data ?>);
+  const removed = JSON.parse(<?= removed_orders ?>);
+
+  // Show pretty output
+  window.onload = function () {
+    document.getElementById("result").innerText = 
+      JSON.stringify(backets, null, 2) + "\n\n" +
+      "Already calculated:\n" +
+      JSON.stringify(removed, null, 2);
+  };
+
+//----------------------------------------------------------------------------------------------
+function disableConfirmBtn(flag = false) {
+  const confirmBtn = document.querySelector(".confirm-btn");
+  if (flag === false){
+    confirmBtn.innerText = "Підтвердити";
+  } else {
+    confirmBtn.innerText = "Processing...";
+  }
+  confirmBtn.disabled = flag;
+}
+
+//----------------------------------------------------------------------------------------------
+  function confirmCalculation() {
+
+    disableConfirmBtn(true);
+
+    google.script.run
+    .withSuccessHandler(function (response) {
+      alert(response);
+
+      google.script.run
+        .withSuccessHandler(function (data) {
+          alert(data);
+          disableConfirmBtn(false);
+          google.script.host.close();
+        })
+        .withFailureHandler(function (err) {
+          alert("Post-calc error: " + err.message);
+          disableConfirmBtn(false);
+        })
+        .onCompleteCalculateOperation(backets);
+    })
+    .withFailureHandler(function (error) {
+      alert("Error calculation orders: " + error.message);
+      disableConfirmBtn(false);
+    })
+    .onCalculationConfirmed(backets); 
+  }
+
+</script>
+
+<h3>Calculated Orders</h3>
+<pre id="result" style="
+  background: #f1f1f1;
+  padding: 12px;
+  border-radius: 8px;
+  white-space: pre-wrap;">
+</pre>
+
+<button class="confirm-btn" onclick="confirmCalculation()">
+  Підтвердити
+</button>
+
+<button class="cancel-btn" onclick="google.script.host.close()"
+  style="margin-top: 20px; padding: 8px 16px;">
+  Cancel
+</button>
+
+</body>
+</html>
