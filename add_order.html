@@ -11,7 +11,7 @@
   let articuls = [];
   let positions = [];
   let accounts = [];
-  let pendingOrderData = null;
+  let pending_order_data = null;
   let transfer_price_kg = 30; // price per kg/UAH
 
   // Load items from Google Sheets
@@ -112,19 +112,23 @@
         ${articuls.map((articul, idx) =>
           `<option value="${articul._offer_id}"
             item-idx="${idx}"
+            offer-id="${articul._offer_id}"
             item-name="${articul._name}"
             bare-price="${articul._bare_price}"
             sell-price="${articul._sell_price}"
-            default-price="${articul._sell_price}"
+            condition="${articul._condition}"
             weight="${articul._weight}"
             price-rule='${articul._price_rule ? JSON.stringify(articul._price_rule) : ""}'>
-            (${articul._offer_id}) ${articul._name} ${articul._bare_price}
+            (${articul._offer_id}) ${articul._name} [${articul._condition}] ${articul._bare_price} UAH
           </option>`
         ).join('')}
-      </select><br><br>
+      </select><br>
+      <label id="pos-condition-${index}" style="font-size: 0.8rem; font-weight: bold;"></label>
+      <br>
+      <br>
 
       <label>Кількість:</label><br>
-      <input id="count_${index}" type="number" value="1" oninput="update_position(${index}, 'count_changed')"><br><br>
+      <input id="count_${index}" type="number" value="1" min="1" step="1" oninput="update_position(${index}, 'count_changed')"><br><br>
       
       <label>Ціна одиниці товару:</label><br>      
       <input 
@@ -132,6 +136,7 @@
         type="number" 
         step="any" 
         value="0"
+        min="0"
         oninput="update_position(${index}, 'price_per_one_changed')" 
         onkeydown="this.dataset.lastValue=this.value" 
         onwheel="this.blur()" 
@@ -163,14 +168,14 @@
       <label id="price_original_${index}" style="font-size: 0.8rem; font-weight: bold; color: darkred;"></label><br><br>
 
       <label style="font-size: 0.85rem; font-weight: bold;">Прибуток:</label>
-      <label id="profit_price_${index}" type="number" value="0" style="font-size: 0.85rem; font-weight: bold;" readonly></label><br><br>
+      <label id="pos-profit-${index}" type="number" value="0" style="font-size: 0.85rem; font-weight: bold;" readonly></label><br><br>
  
       <label style="font-size: 0.8rem; font-weight: bold; color: darkblue;">в т.ч. Витрати:</label>
       <label id="tax-amount-${index}" type="number" value="0" style="font-size: 0.8rem; font-weight: bold;" readonly></label>
       <label type="number" value="0" style="font-size: 0.8rem; font-weight: bold;" readonly>грн.</label><br><br>
 
       <label style="font-size: 0.8rem; font-weight: bold; color: darkblue;">Залишок:</label>
-      <label id="count-avail_${index}" style="font-size: 0.8rem; font-weight: bold; color: darkblue;"></label><br>
+      <label id="count-avail-${index}" style="font-size: 0.8rem; font-weight: bold; color: darkblue;"></label><br>
     `;
 
     const container = document.getElementById('positions');
@@ -216,7 +221,7 @@ function on_update_account(){
       // fall through intentionally
 
     case "count_changed":
-      // fall through intentionally
+      update_counts();
 
     case "price_per_one_changed":{
       const default_price = getDefaultItemPrice(index);
@@ -274,9 +279,9 @@ function reset_articul_default(index){
 
   const pos_price = document.getElementById(`price_${index}`);
   pos_price.value = price_per_unit.toFixed(4);
-  //pos_price.disabled = true;
 
-  //document.getElementById(`enable_price_${index}`).checked = true;
+  const condition = sel.options[sel.selectedIndex].getAttribute("condition");
+  document.getElementById(`pos-condition-${index}`).innerText = condition;
 }
 
   //----------------------------------------------------------------------------------------------
@@ -324,29 +329,46 @@ function reset_articul_default(index){
 
     const profit = total - (count * bare_price);
 
-    let elProfitPrice = document.getElementById(`profit_price_${index}`)
-    elProfitPrice.innerText = profit.toFixed(4) + " грн.";
-    elProfitPrice.setAttribute('profit-price', profit.toFixed(4));
+    let elProfitPrice = document.getElementById(`pos-profit-${index}`)
+    elProfitPrice.innerText = profit.toFixed(2) + " грн.";
+    elProfitPrice.setAttribute('pos-profit', profit.toFixed(4));
   }
 
   //----------------------------------------------------------------------------------------------
-  function updateCounts() {
+  function update_counts() {
+
+    const map_offer_id_count = new Map();
+
     items.forEach(it => {
-      it.count_remains = Number(it.count_available);
+      map_offer_id_count[it._offer_id] = it._count;
     });
 
     positions.forEach((p, index) => {
-        if (p !== null) {
+        if (p !== null) {          
           const sel = document.getElementById("item_" + index);
-          if (!sel) return; // not present in DOM
+          if (!sel) { return }; // not present in DOM
           const opt = sel.options[sel.selectedIndex];
           let item_idx = Number(opt.getAttribute('item-idx'));
+          let offer_id = Number(opt.getAttribute('offer-id'));
 
-          if (isNaN(item_idx)) return;
-          
+          if (isNaN(item_idx) || isNaN(offer_id)) { return; }
+
           let order_count = Number(document.getElementById("count_" + index).value) || 0;
-          items[item_idx].count_remains = (items[item_idx].count_remains || 0) - order_count;
-          document.getElementById("count-avail_" + index).innerText = String(items[item_idx].count_remains) + " шт.";
+          map_offer_id_count[offer_id] -= order_count;
+        }
+    });
+
+    positions.forEach((p, index) => {
+        if (p !== null) {          
+          const sel = document.getElementById("item_" + index);
+          if (!sel) { return }; // not present in DOM
+          const opt = sel.options[sel.selectedIndex];
+          let item_idx = Number(opt.getAttribute('item-idx'));
+          let offer_id = Number(opt.getAttribute('offer-id'));
+
+          if (isNaN(item_idx) || isNaN(offer_id)) { return; }
+
+          document.getElementById("count-avail-" + index).innerText = String(map_offer_id_count[offer_id]) + " шт.";
         }
     });
   }
@@ -360,14 +382,13 @@ function reset_articul_default(index){
     const new_total = document.getElementById(`price_${index}`).value;
     const profit = new_total - (count * barePrice);
 
-    let elProfitPrice = document.getElementById(`profit_price_${index}`);
+    let elProfitPrice = document.getElementById(`pos-profit-${index}`);
     elProfitPrice.innerText = profit.toFixed(2) + " грн.";
-    elProfitPrice.setAttribute('profit-price', profit);
+    elProfitPrice.setAttribute('pos-profit', profit);
   }
 
 //----------------------------------------------------------------------------------------------
   function updatePositionTax(index){
-    //alert("updatePositionTax begin");
     const sel = document.getElementById(`item_${index}`);
     const weight = parseFloat(sel.options[sel.selectedIndex].getAttribute("weight"));
     const count = Number(document.getElementById(`count_${index}`).value);
@@ -379,8 +400,7 @@ function reset_articul_default(index){
         FULL_PRICE: total
     };
     const tax_amount = calculateCurrentTax(context);
-    document.getElementById(`tax-amount-${index}`).innerText = tax_amount.toFixed(4);
-    //alert("updatePositionTax end");
+    document.getElementById(`tax-amount-${index}`).innerText = tax_amount.toFixed(2);
   }
 
 //----------------------------------------------------------------------------------------------
@@ -444,21 +464,18 @@ function reset_articul_default(index){
     document.getElementById("pos_" + index).remove();
     positions[index] = null;
     updateTotalOrder();
-    updateCounts();
+    update_counts();
   }
 
 //----------------------------------------------------------------------------------------------
 // Reset form
 //----------------------------------------------------------------------------------------------
-function resetForm() {
+function reset_form() {
   document.getElementById('client-info').value = "";
   document.getElementById('notes').value = "";
   document.getElementById('positions').innerHTML = "";
   positions = [];
-  pendingOrderData = null;
-
-  add_position(); // start with a new blank position
-  updateTotalOrder();
+  pending_order_data = null;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -496,17 +513,20 @@ function submitOrderConfirm() {
 
       let item_name = sel.options[sel.selectedIndex].getAttribute("item-name");
       let bare_price = sel.options[sel.selectedIndex].getAttribute("bare-price");
+      let condition = sel.options[sel.selectedIndex].getAttribute("condition");
 
       const count = Number(document.getElementById(`count_${index}`).value);
-      const profit = Number(document.getElementById(`profit_price_${index}`).getAttribute("profit-price"));
+      const profit = Number(document.getElementById(`pos-profit-${index}`).getAttribute("pos-profit"));
 
       const price_per_one = Number(document.getElementById(`input-suggested-price_${index}`).value);
       const tax = Number(document.getElementById(`tax-amount-${index}`).textContent);
       const pos_price = Number(document.getElementById(`price_${index}`).value);
 
+      const combined_name = item_name + ' (' + condition + ')';
+
       final_positions.push({
-        item_id: sel.value,
-        item_name: item_name,
+        offer_id: sel.value,
+        item_name: combined_name,
         count: count,
         bare_price: bare_price,
         profit: profit,
@@ -518,7 +538,7 @@ function submitOrderConfirm() {
 
       div.innerHTML = `
       <hr>
-      <label>Артикул:   ${item_name}</label><br>
+      <label>Артикул:   ${combined_name} </label><br>
       <label>Кількість: ${count} шт.</label><br>
       <label>Ціна одиниці.: ${price_per_one} грн.</label><br>
       <label>Прибуток.: ${profit} грн.</label><br>
@@ -537,7 +557,7 @@ function submitOrderConfirm() {
   }
 
   // Save for confirmation step
-  pendingOrderData = {
+  pending_order_data = {
     client_info: client_info.value,
     payment: payment_method.value,
     notes: document.getElementById('notes').value,
@@ -552,13 +572,13 @@ function submitOrderConfirm() {
 }
 
 //----------------------------------------------------------------------------------------------
-function closeModal() {
+function close_modal() {
   document.getElementById("confirmModal").style.display = "none";
   document.body.classList.remove("modal-open");
 }
 
 //----------------------------------------------------------------------------------------------
-function confirmSubmit() {
+function confirm_submit() {
   const confirmBtn = document.querySelector(".confirm-btn");
   confirmBtn.disabled = true;
   confirmBtn.innerText = "Processing...";
@@ -570,9 +590,9 @@ function confirmSubmit() {
       // Load items from Google Sheets
     google.script.run.withSuccessHandler(function(data) {
 
-      closeModal();
-      alert(response);
-      resetForm();
+      close_modal();
+      
+      reset_form();
       confirmBtn.disabled = false;
       confirmBtn.innerText = "Підтвердити";
 
@@ -583,14 +603,16 @@ function confirmSubmit() {
       const select = document.getElementById('payment_select');
       select.selectedIndex = 0; // selects the first option (placeholder)
 
-      add_position();   // Add first position automatically
+      add_position(); // start with a new blank position
+      updateTotalOrder();
+
     }).deserialize_articuls();
 
   }).withFailureHandler(function(error) {
     alert("Error adding order: " + error.message);
     confirmBtn.disabled = false;
     confirmBtn.innerText = "Підтвердити";
-  }).add_order('Orders_v2', pendingOrderData);
+  }).add_order('Orders_v2', pending_order_data);
 }
 
 //----------------------------------------------------------------------------------------------
@@ -751,7 +773,6 @@ function evalFormula(str, context) {
     return str;
   }
 }
-
 </script>
 
   <h2>Нове замовлення v0.2.1</h2>
@@ -786,8 +807,8 @@ function evalFormula(str, context) {
         <hr>
         <label id="confirm-container-bottom" style="font-size: 1.2rem; font-weight: bold;"></label><br>
 
-        <button class="cancel-btn" onclick="closeModal()">Скасувати</button>
-        <button class="confirm-btn" onclick="confirmSubmit()">Підтвердити</button>
+        <button class="cancel-btn" onclick="close_modal()">Скасувати</button>
+        <button class="confirm-btn" onclick="confirm_submit()">Підтвердити</button>
       </div>
     </div>
   </div>

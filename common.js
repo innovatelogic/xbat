@@ -1,7 +1,7 @@
 /**
  * Retrive a map of colums where key is a head name and value is a actual index
  */
-function getColumnIndexes(table_name) {
+function getColumnIndexes(table_name, base = 0) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error('Sheet "${table_name}" not found!');
@@ -12,7 +12,7 @@ function getColumnIndexes(table_name) {
   const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
 
   const columns = {};
-  headers.forEach((name, i) => columns[name] = i);
+  headers.forEach((name, i) => columns[name] = i + base);
   return columns;
 }
 
