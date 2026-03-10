@@ -8,7 +8,7 @@ class Account {
 }
 
 //----------------------------------------------------------------------------------------------
-function deserialize_accounts(table_name = 'TEST_Bank Accaunts'){
+function deserialize_accounts(table_name = 'Accounts_v2'){
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error(`Sheet "${table_name}" not found!`);

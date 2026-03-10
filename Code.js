@@ -3,11 +3,11 @@
 //----------------------------------------------------------------------------------------------
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('Замовлення')
+    .createMenu('🔋 XBat Shop')
     .addItem('Створити', 'showOrderForm')
+    .addItem('Створити new (test)', 'showOrderFormNew')
     .addItem('Розрахувати', 'showCalculationForm')
-    .addItem('Export Prom (TEST)', 'export_prom_yml')
-    .addItem('Створити(TEST)', 'showOrderFormNew')
+    .addItem('Export all', 'export_all')
     .addToUi();
 }
 
@@ -29,6 +29,15 @@ function showOrderFormNew() {
     .setWidth(1000);
 
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+//----------------------------------------------------------------------------------------------
+function doGet(e) {
+  const template = HtmlService.createTemplateFromFile('add_order');
+
+  return template.evaluate()
+    .setTitle("Add order")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 //----------------------------------------------------------------------------------------------

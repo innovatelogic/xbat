@@ -1,3 +1,36 @@
+function get_shop_name() { return "XBat" };
+function get_company_name() { return "XBat.com.ua"; }
+function get_company_url() { return "https://www.xbat.com.ua"; }
+
+function get_currency(table_name = 'Kurs UAH')
+{
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(table_name);
+  if (!sh) throw new Error('[get_currency_uah] failed get sheet!');
+
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+
+  if (lastRow < 2) return [];
+
+  const headers = getColumnIndexes(table_name);
+
+  const data = sh.getRange(2, 1, lastRow - 1, lastCol)
+                  .getValues()
+                  .filter(row => row.some(cell => cell !== '' && cell !== null));
+
+  const currency = {};
+
+  data.forEach(row => {
+    try {
+      currency[row[headers['Currency']]] = row[headers['Value']];
+    } catch (e) {
+      Logger.log(`Row failed: ${e.message}`);
+    }
+  });
+  return currency;
+}
+
 /**
  * Retrive a map of colums where key is a head name and value is a actual index
  */
@@ -77,7 +110,18 @@ function fixBrokenJsonStrings(json) {
 //----------------------------------------------------------------------------------------------
 // Evaluate formula
 //----------------------------------------------------------------------------------------------
-function evalFormula(str, context) {
+function evalFormula(str, context, forceStringMode = false) {
+
+  // -----------------------------------------------------
+  // FORCE STRING MODE for HTML / CDATA / multiline text
+  // -----------------------------------------------------
+  if (forceStringMode) {
+    return str.replace(/\$\{([^}:]+)(?::(number|int|float|string))?\}/g, (_, name) => {
+      if (context[name] === undefined) throw new Error(`Unknown variable ${name}`);
+      return context[name];
+    });
+  }
+  
   let expr = str;
 
   const hasVar = /\$\(|\$\{[^}]+\}/.test(str);
@@ -92,6 +136,7 @@ function evalFormula(str, context) {
   // STRING MODE (template replacement only)
   // =====================================================
   if (!isExpression) {
+   
     const fullMatch = str.match(/^\$\{([^}:]+)(?::(number|int|float|string))?\}$/);
 
     // Case: string is ONLY a single template → return typed value
@@ -219,8 +264,6 @@ function evalFormula(str, context) {
   }
 }
 
-
-
 //----------------------------------------------------------------------------------------------
 // Apply export rules to XML string
 //----------------------------------------------------------------------------------------------
@@ -250,11 +293,26 @@ function walkXmlNode(node, context) {
     }
   }
 
-  // ---------- Text content ----------
+  // ---------- Text / CDATA ----------
   const text = node.getText();
   if (text && text.includes("$")) {
-    const newText = evalFormula(text, context);
-    node.setText(String(newText));
+    // Check if node has cdata attribute
+    if (node.getAttribute("cdata") && node.getAttribute("cdata").getValue() === "true") {
+
+      const newText = evalFormula(text, context, true);
+
+      // Remove all current children (including old CDATA)
+      node.getChildren().forEach(c => node.removeContent(c));
+      // Clear old text
+      node.setText(""); 
+      // Add new CDATA node
+      const cdataNode = XmlService.createCdata(newText);
+      node.addContent(cdataNode);
+    } else {
+      // Regular text replacement
+      const newText = evalFormula(text, context);
+      node.setText(newText);
+    }
   }
 
   // ---------- Child elements ----------
@@ -294,14 +352,20 @@ function cloneXmlElement(element) {
   });
 
   // Copy text nodes
-  element.getText(); // get text
-  if (element.getText() && element.getText().trim() !== "") {
-    clone.setText(element.getText());
+  const text = element.getText(); // get text
+  if (text && text.trim() !== "") {
+     const useCdata = element.getAttribute("cdata")?.getValue() === "true";
+    if (useCdata) {
+      clone.addContent(XmlService.createCdata(text));
+    } else {
+      clone.setText(text);
+    }
   }
 
   return clone;
 }
 
+//----------------------------------------------------------------------------------------------
 function writeRange(table_name, values, startRow, startCol, textColors, backgroundColors) {
   const default_black = "#000000";
   const default_white = "#ffffff";
@@ -357,6 +421,15 @@ function writeRange(table_name, values, startRow, startCol, textColors, backgrou
   }
 }
 
+//----------------------------------------------------------------------------------------------
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+//----------------------------------------------------------------------------------------------
+function add_xml_node_text(parent, tag, text) {
+  const el = XmlService.createElement(tag);
+  if (text) el.setText(text);
+  parent.addContent(el);
+  return el;
 }

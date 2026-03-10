@@ -7,6 +7,8 @@ class Articul {
     this._available = context.available;
     this._bare_price = context.bare_price;
     this._sell_price = context.sell_price;
+    this._sell_price_ua = context.sell_price_ua;
+    this._sell_price_pl = context.sell_price_pl;
     this._count = context.count;
     this._type = context.type;
     this._weight = context.weight;
@@ -15,6 +17,7 @@ class Articul {
     this._images_raw = context.images_raw;
 
     this._images = context.images_raw ? context.images_raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean) : [];
+    this._price_rules = this.get_price_rules();
   }
 
   //----------------------------------------------------------------------------------------------
@@ -26,6 +29,8 @@ class Articul {
         CONDITION: this._condition,
         AVAILABLE: this._available,
         SELL_PRICE: this._sell_price,
+        SELL_PRICE_UA: this._sell_price_ua,
+        SELL_PRICE_PL: this._sell_price_pl,
         COUNT: this._count,
         WEIGHT: this._weight,
         TYPE: this._type
@@ -35,6 +40,11 @@ class Articul {
       context[`IMG_${i}`] = img;
     });
     return context;
+  }
+
+  //----------------------------------------------------------------------------------------------
+  update_price_rules(){
+    this._price_rules = get_price_rules();
   }
 
   //----------------------------------------------------------------------------------------------
@@ -67,7 +77,7 @@ class Articul {
 }
 
 //----------------------------------------------------------------------------------------------
-function deserialize_articuls(table_name = 'TEST_ArticulsUA') {
+function deserialize_articuls(table_name = 'Articuls_v2') {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) { 
@@ -98,13 +108,15 @@ function deserialize_articuls(table_name = 'TEST_ArticulsUA') {
         condition: row[headers['Condition']],
         available: row[headers['Available']],
         bare_price: row[headers['Ціна поставки (UAH)']],
-        sell_price: row[headers['Sell Price (UAH)']],
+        sell_price: row[headers['Sell Price (UA)']],
+        sell_price_ua: row[headers['Sell Price (UA)']],
+        sell_price_pl: row[headers['Sell Price (PL)']],
         count: row[headers['Count']],
         weight: row[headers['Weight (gr)']] / 1000,
         type: row[headers['Type']],
         images_raw,
         export_rules_raw,
-        price_rules_raw: price_rule_raw
+        price_rules_raw: price_rule_raw,
       };
 
       articuls.push(new Articul(context));
@@ -137,25 +149,16 @@ function TEST_ArticulObject(){
                                 <g:name>Акумулятор \${BRAND} \${NAME} (нові-депакет)</g:name>
                                 <g:categoryId>0</g:categoryId>
                                 <g:portal_category_id>1507</g:portal_category_id>
-                                <g:price>ceil5($(SELL_PRICE) * 1.2)</g:price>
+                                <g:price>ceil5(\$(SELL_PRICE) * 1.2)</g:price>
                                 <g:currencyId>UAH</g:currencyId>
                                 <g:quantity_in_stock>\${COUNT}</g:quantity_in_stock>
                                 <g:keywords>Акумулятор, Li-Ion</g:keywords>
-                                <g:description>Акумулятор - \${BRAND} M50LT 21700
+                                <g:description cdata="true"><![CDATA[Акумулятор - \${BRAND} \${NAME} (\${CONDITION})<br/>
 
-                          Один із найкращих літій-іонних акумуляторів формату 21700 від південнокорейського гіганта \${BRAND}. Модель M50LT спеціально розроблена для пристроїв, що потребують високої ємності та тривалої автономної роботи. Ідеально підходить для електровелосипедів, самокатів, потужних ліхтарів, повербанків та електротранспорту.
-
-                          Можлива оплата на рахунок ФОП
-                          Акумулятори нові, мають сліди від зварювання бо депакетовані з нових нениклованих пакетів.
-
-                          Виробник: \${BRAND}
-                          Тип: Li-ion
-                          Ємність перевірена: 4950-4950mAh
-                          Максимальний постійний струм розряду: 10 A
-                          Максимальний імпульсний струм розряду: 15 A
-                          Напруга повного заряду: 4.2 B
-                          Напруга повного розряду: 2.8 B
-                          Опір 14-15 mom</g:description>
+                          Виробник: \${BRAND}<br/>
+                          Тип: Li-ion<br/>
+                          Опір 14-15 mom]]>
+                          </g:description>
 
                                 <g:picture>\${IMG_0}</g:picture>
                                 <g:picture>\${IMG_1}</g:picture>
@@ -169,7 +172,37 @@ function TEST_ArticulObject(){
                                 <g:param name="Тип акумулятора">Li-Ion</g:param>
                               </g:offer>
                           </g:Prom>
+                          <Rozetka>
+                            <offer id="\${OFFER_ID}" available="(\${COUNT} > 0 &amp;&amp; \${AVAILABLE} == 'Available') ? 'in stock' : 'false' ">
+                            <price>ceil5(\$(SELL_PRICE) * 1.2)</price>
+                            <currencyId>UAH</currencyId>
+                            <categoryId>0</categoryId>
+                            <vendor>\${BRAND}</vendor>
+                            <article>\${OFFER_ID}</article>
+                            <name>Акумулятор \${BRAND} \${NAME} (нові-депакет)</name>
+
+                            <description cdata="true"><![CDATA[Акумулятор - \${BRAND} \${NAME} (\${CONDITION})<br/>
+
+                          Виробник: \${BRAND}<br/>
+                          Тип: Li-ion<br/>
+                          Опір 14-15 mom]]>
+                          </description>
+
+                            <picture>\${IMG_0}</picture>
+                            <picture>\${IMG_1}</picture>
+                            <picture>\${IMG_2}</picture>
+                            <picture>\${IMG_3}</picture>
+                            <picture>\${IMG_4}</picture>
+                            <picture>\${IMG_5}</picture>
+
+                            <param name="Стан">(\${CONDITION} == 'new') ? 'Новий': 'Вживані'</param>
+                            <param name="Типорозмір">18650</param>
+                            <param name="Тип акумулятора">Li-Ion</param>
+
+                            </offer>
+                          </Rozetka>
                       </g:export>`,
+
     price_rules_raw: `[{"min":1, "max":300, "price":"\${SELL_PRICE:int}"},
                       {"min":300, "max":1000, "price":"ceil5(\${SELL_PRICE:int} * 0.9)"},
                       {"min":1000, "max":999999999, "price":"ceil5(\${SELL_PRICE:int} * 0.85)"}]`,
@@ -204,21 +237,11 @@ function TEST_ArticulObject(){
       <g:currencyId>UAH</g:currencyId>
       <g:quantity_in_stock>500</g:quantity_in_stock>
       <g:keywords>Акумулятор, Li-Ion</g:keywords>
-      <g:description>Акумулятор - articul brand M50LT 21700
+      <g:description cdata="true"><![CDATA[Акумулятор - articul brand articul name (new)<br/>
 
-                          Один із найкращих літій-іонних акумуляторів формату 21700 від південнокорейського гіганта articul brand. Модель M50LT спеціально розроблена для пристроїв, що потребують високої ємності та тривалої автономної роботи. Ідеально підходить для електровелосипедів, самокатів, потужних ліхтарів, повербанків та електротранспорту.
-
-                          Можлива оплата на рахунок ФОП
-                          Акумулятори нові, мають сліди від зварювання бо депакетовані з нових нениклованих пакетів.
-
-                          Виробник: articul brand
-                          Тип: Li-ion
-                          Ємність перевірена: 4950-4950mAh
-                          Максимальний постійний струм розряду: 10 A
-                          Максимальний імпульсний струм розряду: 15 A
-                          Напруга повного заряду: 4.2 B
-                          Напруга повного розряду: 2.8 B
-                          Опір 14-15 mom</g:description>
+                          Виробник: articul brand<br/>
+                          Тип: Li-ion<br/>
+                          Опір 14-15 mom]]></g:description>
       <g:picture>https://idoo-public.s3.eu-central-1.amazonaws.com/articuls/61000/img1.webp</g:picture>
       <g:picture>https://idoo-public.s3.eu-central-1.amazonaws.com/articuls/61000/img2.webp</g:picture>
       <g:picture>https://idoo-public.s3.eu-central-1.amazonaws.com/articuls/61000/img3.webp</g:picture>
@@ -230,6 +253,13 @@ function TEST_ArticulObject(){
       <g:param name="Тип акумулятора">Li-Ion</g:param>
     </g:offer>
   </g:Prom>
+
+  <Rozetka>
+  <offer available="(\${AVAILABLE} == 'Available') ? 'true' : 'false' ">
+
+  </offer>
+  </Rozetka>
+
 </g:export>`;
 
   let export_rules_xml = articul.get_export_rules();
@@ -237,8 +267,10 @@ function TEST_ArticulObject(){
   const expected_frmt_xml = XmlService.getCompactFormat().format(XmlService.parse(expected));
   const export_rules_frmt_xml = XmlService.getCompactFormat().format(XmlService.parse(export_rules_xml));
 
+  console.log(export_rules_xml);
+
   if (expected_frmt_xml !== export_rules_frmt_xml){
-    throw new Error(`Test failed. Expected ${expected}, got >>>> ${result}`);
+    throw new Error(`Test failed. Expected ${expected}, got >>>> ${export_rules_xml}`);
   }
   console.log(`✅ ${getCallerFunctionName()} Test passed`);
 }

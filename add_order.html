@@ -118,8 +118,8 @@
             sell-price="${articul._sell_price}"
             condition="${articul._condition}"
             weight="${articul._weight}"
-            price-rule='${articul._price_rule ? JSON.stringify(articul._price_rule) : ""}'>
-            (${articul._offer_id}) ${articul._name} [${articul._condition}] ${articul._bare_price} UAH
+            price-rule='${articul._price_rules ? JSON.stringify(articul._price_rules) : ""}'>
+            ${articul._name} (${articul._condition}) (${articul._offer_id}) ${articul._bare_price} UAH
           </option>`
         ).join('')}
       </select><br>
@@ -221,7 +221,7 @@ function on_update_account(){
       // fall through intentionally
 
     case "count_changed":
-      update_counts();
+      update_counts(index);
 
     case "price_per_one_changed":{
       const default_price = getDefaultItemPrice(index);
@@ -335,7 +335,14 @@ function reset_articul_default(index){
   }
 
   //----------------------------------------------------------------------------------------------
-  function update_counts() {
+  function update_counts(index) {
+    const default_price = getDefaultItemPrice(index);
+
+    //document.getElementById(`item-price-orig_${index}`).innerText = "";
+    //document.getElementById(`price_original_${index}`).innerText = "";
+
+    let elSuggestedPrc = document.getElementById(`input-suggested-price_${index}`);
+    elSuggestedPrc.value = parseFloat(default_price);
 
     const map_offer_id_count = new Map();
 
@@ -411,6 +418,7 @@ function reset_articul_default(index){
 
 //----------------------------------------------------------------------------------------------
   function getDefaultItemPrice(index) {
+    
     const count = Number(document.getElementById(`count_${index}`).value);
     const sel = document.getElementById(`item_${index}`);
     const sellPrice = parseFloat(sel.options[sel.selectedIndex].getAttribute("sell-price"));
@@ -421,8 +429,11 @@ function reset_articul_default(index){
     if (ruleRaw) {
       try {
         const rule = JSON.parse(ruleRaw);
+
         pricePerUnit = calcByRule(count, rule, sellPrice);
-      } catch (e) {}
+      } catch (e) {
+        console.error("[getDefaultItemPrice] error price calculation");
+      }
     }
 
     return pricePerUnit;
@@ -464,7 +475,7 @@ function reset_articul_default(index){
     document.getElementById("pos_" + index).remove();
     positions[index] = null;
     updateTotalOrder();
-    update_counts();
+    update_counts(index);
   }
 
 //----------------------------------------------------------------------------------------------

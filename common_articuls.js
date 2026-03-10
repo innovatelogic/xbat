@@ -30,7 +30,7 @@ function applyExportRules(obj, context) {
 //----------------------------------------------------------------------------------------------
 // Update counts
 //----------------------------------------------------------------------------------------------
-function get_all_items_v2(table_name = 'TEST_ArticulsUA') {
+function get_all_items_v2(table_name = 'Articuls_v2') {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error('Sheet "${table_name}" not found!');
@@ -55,7 +55,8 @@ function get_all_items_v2(table_name = 'TEST_ArticulsUA') {
     const available  = row[headers['Available']];
 
     const bare_price = row[headers['Ціна поставки (UAH)']];
-    const sell_price = row[headers['Sell Price (UAH)']];
+    const sell_price = row[headers['Sell Price (UA)']];
+    const sell_price_pl = row[headers['Sell Price (PL)']];
     const price_rule_raw = row[headers['Price rule']];
 
     const weight = row[headers['Weight (gr)']];
@@ -78,6 +79,8 @@ function get_all_items_v2(table_name = 'TEST_ArticulsUA') {
         CONDITION: condition,
         AVAILABLE: available,
         SELL_PRICE: sell_price,
+        SELL_PRICE_UA: sell_price,
+        SELL_PRICE_PL: sell_price_pl,
         COUNT: count,
         WEIGHT: weight,
         TYPE: type
@@ -174,7 +177,7 @@ function TEST_applyExportRulesXML(){
 
     const xml_raw = `<g:export xmlns:g="http://example.com/google">
                       <g:Prom>
-                          <g:offer id="\${OFFER_ID}" available="(\${AVAILABLE} == 'Available') ? 'true' : 'false' " in_stock="(\${COUNT} > 0) ? 'in stock' : 'false'" selling_type="u">
+                          <g:offer id="\${OFFER_ID}" available="(\${AVAILABLE} == 'Available') ? 'true' : 'false' " in_stock="(\${COUNT} > 0 &amp;&amp; \${AVAILABLE} == 'Available') ? 'in stock' : 'false' " selling_type="u">
                                 <g:name>Акумулятор \${BRAND} \${NAME} (нові-депакет)</g:name>
                                 <g:categoryId>0</g:categoryId>
                                 <g:portal_category_id>1507</g:portal_category_id>

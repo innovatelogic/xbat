@@ -147,7 +147,7 @@ function add_order(table_name, data) {
   // optional: thinner row
   orderSheet.setRowHeight(sumRow, 14);
   
-  update_articuls_counts('TEST_ArticulsUA', positions);
+  update_articuls_counts('Articuls_v2', positions);
 
   return `Order ${order_id} added successfully! Total: ${total_price}`;
 }
