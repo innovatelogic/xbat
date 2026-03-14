@@ -5,6 +5,7 @@ function export_all()
 {
   export_prom_articuls();
   export_rozetka_articuls();
+  export_xbat_com_ua_articuls();
 }
 
 //----------------------------------------------------------------------------------------------
@@ -137,9 +138,6 @@ function export_rozetka_articuls()
   }
   shop.addContent(categories);
 
-
-  
-
   const items = get_all_items_v2();
 
   items.forEach(offer => {
@@ -170,8 +168,8 @@ function export_rozetka_articuls()
   uploadToS3(xml_string, 'xbat/export/rozetka.xml');
 
     writeRange(
-  "Dashboard", [["Export", "Prom"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/rozetka.xml']],
-    1,5,
+  "Dashboard", [["Export", "Rozetka"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/rozetka.xml']],
+    5,1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]
@@ -181,7 +179,80 @@ function export_rozetka_articuls()
     ["#00ff00", "#00ff00"]
   ]
 );
+}
 
+//----------------------------------------------------------------------------------------------
+// prom export function
+//----------------------------------------------------------------------------------------------
+function export_xbat_com_ua_articuls()
+{
+const root = XmlService.createElement("yml_catalog");
+
+  const now = new Date();
+  const daytime = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
+  root.setAttribute("date", daytime);
+
+  const shop = XmlService.createElement('shop');
+  root.addContent(shop);
+
+
+  add_xml_node_text(shop, "name", get_shop_name());
+  add_xml_node_text(shop, "company", get_company_name());
+  add_xml_node_text(shop, "url", get_company_url());
+
+  const categories = XmlService.createElement('categories');
+
+  const offers = XmlService.createElement('offers');
+  
+  {
+    const root_category = XmlService.createElement('category')
+                            .setAttribute('id', 136075826)
+                            .setText("Акумутятори, елементи живлення, контроллери, аксесуари");
+
+    categories.addContent(root_category);
+  }
+  shop.addContent(categories);
+
+  const items = get_all_items_v2();
+
+  items.forEach(offer => {
+    if (offer.export_rules == null) {
+      return;
+    }
+
+    const root = XmlService.parse(offer.export_rules).getRootElement();
+
+    const prom = root.getChild("xbat-com-ua");
+    if (!prom) { return; }
+
+    const src_offer = prom.getChild("offer");
+    if (!src_offer) { return; }
+
+    if (src_offer){
+      offers.addContent(cloneXmlElement(src_offer));
+    }
+  });
+
+  shop.addContent(offers);
+
+  const doc = XmlService.createDocument(root);
+
+  // Convert to string
+  const xml_string = XmlService.getPrettyFormat().format(doc);
+
+  uploadToS3(xml_string, 'xbat/export/xbat-com-ua.xml');
+
+    writeRange(
+  "Dashboard", [["Export", "Xbat.com.ua"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/xbat-com-ua.xml']],
+    9,1,
+  [
+    ["#000000", "#000000"],
+    ["#000000", "#000000"]
+  ],
+  [
+    ["#00ff00", "#00ff00"],
+    ["#00ff00", "#00ff00"]
+  ]);
 }
 
 

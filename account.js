@@ -43,6 +43,22 @@ function deserialize_accounts(table_name = 'Accounts_v2'){
 }
 
 //----------------------------------------------------------------------------------------------
+//
+//----------------------------------------------------------------------------------------------
+function get_account_buckets(table_name = "Accounts_v2")
+{
+  const accounts = deserialize_accounts(table_name);
+
+  const buckets = new Map();
+
+  accounts.forEach(a => {
+    if (!buckets.has(a._bucket)) { buckets.set(a._bucket, []); }
+    buckets.get(a._bucket).push(a);
+  });
+  return buckets;
+}
+
+//----------------------------------------------------------------------------------------------
 function TEST_Process_Tax_Formula() {
   const tax_rule = `{"tax":"(\${WEIGHT_KG} * \${TRANSFER_PRICE_KG}) + (\${FULL_PRICE} * 0.01)"}`;
 

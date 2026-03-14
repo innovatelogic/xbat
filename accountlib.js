@@ -28,7 +28,7 @@ function getAccountsBackets(table_name = 'Bank Accaunts')
 {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
-  if (!sh) throw new Error('Sheet "${table_name}" not found!');
+  if (!sh) throw new Error(`Sheet "${table_name}" not found!`);
 
   const lastRow = sh.getLastRow();
   if (lastRow < 1) return new Map();
@@ -46,3 +46,4 @@ function getAccountsBackets(table_name = 'Bank Accaunts')
 
   return backets;
 }
+
