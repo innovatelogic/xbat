@@ -181,6 +181,24 @@ function import_xbat_products_from_xml() {
         // -------------------------
         // Product images (prevent duplicates)
         // -------------------------
+     /*   $images = [];
+        foreach ($offer->picture as $pic) {
+            $images[] = (string)$pic;
+        }
+
+        if (!empty($images)) {
+            $attachment_ids = [];
+            foreach ($images as $image_url) {
+                $existing_id = xbat_find_existing_image($image_url, $product->get_id());
+                if ($existing_id) {
+                    $attachment_ids[] = $existing_id;
+                } else {
+                    $attachment_ids[] = import_image_from_url($image_url, $product->get_id());
+                }
+            }
+            if ($attachment_ids) $product->set_gallery_image_ids($attachment_ids);
+            $product->set_image_id($attachment_ids[0]);
+        }*/
         
         $product_id_saved = $product->save();
         if (!$product_id_saved) {
@@ -190,7 +208,7 @@ function import_xbat_products_from_xml() {
         if ($category_id) {
             wp_set_object_terms($product_id_saved, (int)$category_id, 'product_cat');
         }
-
+/*
         if (isset($offer->price_rule)) {
             $fixed_price_rules = [];
         
@@ -215,6 +233,52 @@ function import_xbat_products_from_xml() {
             // Optional cleanup if old key was used before:
             delete_post_meta($product_id_saved, '_wc_tiered_price_table');
         }
+*/
+		
+		$fixed_price_rules = [];
+
+		if (isset($offer->price_rule)) {
+
+			foreach ($offer->price_rule as $rule) {
+
+				$min_qty = isset($rule['min'])
+					? (int)$rule['min']
+					: 1;
+
+				$rule_price = (float)$rule;
+
+				if ($min_qty > 0 && $rule_price > 0) {
+					$fixed_price_rules[$min_qty] = (string)$rule_price;
+				}
+			}
+		}
+
+		if (!empty($fixed_price_rules)) {
+
+			ksort($fixed_price_rules, SORT_NUMERIC);
+
+			update_post_meta(
+				$product_id_saved,
+				'_fixed_price_rules',
+				$fixed_price_rules
+			);
+
+		} else {
+
+			// removes stale tiers if absent from XML
+			delete_post_meta(
+				$product_id_saved,
+				'_fixed_price_rules'
+			);
+		}
+
+		delete_post_meta(
+			$product_id_saved,
+			'_wc_tiered_price_table'
+		);
+
+		wc_delete_product_transients($product_id_saved);
+		clean_post_cache($product_id_saved);
 
 
         // 2) Populate images AFTER save
