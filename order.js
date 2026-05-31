@@ -2,7 +2,7 @@
 //----------------------------------------------------------------------------------------------
 // Add order with multiple positions
 //----------------------------------------------------------------------------------------------
-function addOrder(data) {
+/*function addOrder(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let orderSheet = ss.getSheetByName('Orders New');
 
@@ -74,7 +74,7 @@ function addOrder(data) {
   updateArticulCounts(positions);
 
   return `Order ${orderId} added successfully! Total: ${total_price}`;
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Add order with multiple positions
@@ -156,6 +156,8 @@ function add_order(table_name, data) {
 //----------------------------------------------------------------------------------------------
 function update_articuls_counts(table_name, positions)
 {
+  console.log("[update_articuls_counts] begin:");
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
 
@@ -174,14 +176,29 @@ function update_articuls_counts(table_name, positions)
 
   positions.forEach(p => {
 
-    const row = id_row_map[p.offer_id];
+    let row = null;
+    let position_count = p.count;
+
+    if (is_base(p.offer_id)) {
+      row = id_row_map[p.offer_id];
+    }
+    else{
+      let id_count = parse_articul(p.offer_id);
+      if (id_count === null){
+        console.log("[update_articuls_counts] Parse articul failed:" + p.offer_id);
+        return;
+      }
+      row = id_row_map[id_count.base_id];
+      position_count = position_count * id_count.count; 
+    }
+
+    //const row = id_row_map[p.offer_id];
 
     if (row) {
-
       const cell = sh.getRange(row, col_count);
       const current = cell.getValue();
 
-      cell.setValue(current - p.count);
+      cell.setValue(current - position_count);
     }
   });
 }

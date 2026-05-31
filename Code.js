@@ -6,6 +6,7 @@ function onOpen() {
     .createMenu(get_config_value('.shortName'))
     .addItem('Створити', 'show_order_form')
     .addItem('Розрахувати', 'show_calculation_form_new')
+    .addItem('Менеджер Товарів', 'show_articul_manager_form')
     .addItem('Export all', 'export_all')
     .addToUi();
 }
@@ -17,14 +18,6 @@ function show_order_form() {
     .setTitle('Додати замовлення')
     .setWidth(1000);
 
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-//----------------------------------------------------------------------------------------------
-// Show the order form as SIDEBAR
-function show_order_form_old() {
-  const html = HtmlService.createHtmlOutputFromFile('index')
-      .setTitle('Додати замовлення (Old version)')
-      .setWidth(800);  // Sidebar title
   SpreadsheetApp.getUi().showSidebar(html);
 }
 

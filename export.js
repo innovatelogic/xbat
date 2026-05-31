@@ -11,8 +11,23 @@ function export_all()
 //----------------------------------------------------------------------------------------------
 // prom export function
 //----------------------------------------------------------------------------------------------
-function export_prom_articuls()
+function test_export(){
+  //export_prom_articuls('xbat/export/test_prom.xml');
+  export_rozetka_articuls('xbat/export/test_rozetka.xml');
+  //export_xbat_com_ua_articuls('xbat/export/test_xbat-com-ua.xml');
+}
+
+//----------------------------------------------------------------------------------------------
+// prom export function
+//----------------------------------------------------------------------------------------------
+function export_prom_articuls(arg)
 {
+  const filepath = (typeof arg === 'string') ? arg : 'xbat/export/prom.xml';
+
+  const logger = new ScopedLogger("export_prom_articuls");
+
+  logger.log("start export");
+
   const nd_root = XmlService.getNamespace('g', 'http://base.google.com/ns/1.0');
 
   // Create elements in the namespace if needed
@@ -65,10 +80,12 @@ function export_prom_articuls()
 
   //console.log(xmlString);
 
-  uploadToS3(xmlString, 'xbat/export/prom.xml');
+  uploadToS3(xmlString, filepath);
+
+  logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
   writeRange(
-  "Dashboard", [["Export", "Prom"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/prom.xml']],
+  "Dashboard", [["Export", "Prom"], [getTimestamp(), logger.flush()]],
     1,1,
   [
     ["#000000", "#000000"],
@@ -84,8 +101,14 @@ function export_prom_articuls()
 //----------------------------------------------------------------------------------------------
 // prom export function
 //----------------------------------------------------------------------------------------------
-function export_rozetka_articuls()
+function export_rozetka_articuls(arg)
 {
+  const filepath = (typeof arg === 'string') ? arg : 'xbat/export/rozetka.xml';
+
+  const logger = new ScopedLogger("export_rozetka_articuls");
+
+  logger.log("start export");
+
   const root = XmlService.createElement("yml_catalog");
 
   const now = new Date();
@@ -164,10 +187,12 @@ function export_rozetka_articuls()
   // Convert to string
   const xml_string = XmlService.getPrettyFormat().format(doc);
 
-  uploadToS3(xml_string, 'xbat/export/rozetka.xml');
+  uploadToS3(xml_string, filepath);
 
-    writeRange(
-  "Dashboard", [["Export", "Rozetka"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/rozetka.xml']],
+  logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
+
+  writeRange(
+  "Dashboard", [["Export", "Rozetka"], [getTimestamp(), logger.flush()]],
     5,1,
   [
     ["#000000", "#000000"],
@@ -183,9 +208,15 @@ function export_rozetka_articuls()
 //----------------------------------------------------------------------------------------------
 // prom export function
 //----------------------------------------------------------------------------------------------
-function export_xbat_com_ua_articuls()
+function export_xbat_com_ua_articuls(arg)
 {
-const root = XmlService.createElement("yml_catalog");
+  const filepath = (typeof arg === 'string') ? arg : 'xbat/export/xbat-com-ua.xml';
+
+  const logger = new ScopedLogger("export_xbat_com_ua_articuls");
+
+  logger.log("start export");
+
+  const root = XmlService.createElement("yml_catalog");
 
   const now = new Date();
   const daytime = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
@@ -239,10 +270,12 @@ const root = XmlService.createElement("yml_catalog");
   // Convert to string
   const xml_string = XmlService.getPrettyFormat().format(doc);
 
-  uploadToS3(xml_string, 'xbat/export/xbat-com-ua.xml');
+  uploadToS3(xml_string, filepath);
+
+  logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
     writeRange(
-  "Dashboard", [["Export", "Xbat.com.ua"], [getTimestamp(), 'https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/export/xbat-com-ua.xml']],
+  "Dashboard", [["Export", "Xbat.com.ua"], [getTimestamp(), logger.flush()]],
     9,1,
   [
     ["#000000", "#000000"],

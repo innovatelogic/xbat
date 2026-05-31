@@ -28,6 +28,139 @@ function applyExportRules(obj, context) {
 }
 
 //----------------------------------------------------------------------------------------------
+function fill_item_context(headers, row_data){
+  const offer_id  = row_data[headers['offer_id']];
+  const brand     = row_data[headers['Brand']];
+  const market_name = row_data[headers['Market Name']];
+  const name      = row_data[headers['Name']];
+  const condition = row_data[headers['Condition']];
+  const available  = row_data[headers['Available']];
+
+  const bare_price = row_data[headers['Ціна поставки (UAH)']];
+  const sell_price = row_data[headers['Sell Price (UA)']];
+  const sell_price_pl = row_data[headers['Sell Price (PL)']];
+  const price_rule_raw = row_data[headers['Price rule(UA)']];
+  const delivery_count = row_data[headers['Delivering']];
+
+  const weight = row_data[headers['Weight (gr)']];
+  const type = row_data[headers['Type']];
+
+  const count = row_data[headers['Count']];
+  //const export_rules_raw = row[headers['Export Rules']];
+  const images_raw = row_data[headers['Images']];
+
+  const export_rules_raw = row_data[headers['Export Rules']];
+
+  const images = (images_raw || "")
+                    .split(/\r?\n/)
+                    .map(s => s.trim())
+                    .filter(Boolean); // remove empty lines
+
+  let context = {
+      OFFER_ID: offer_id,
+      BRAND: brand,
+      NAME: name,
+      MARKET_NAME: market_name,
+      CONDITION: condition,
+      AVAILABLE: available,
+      BARE_PRICE: bare_price,
+      SELL_PRICE: sell_price,
+      SELL_PRICE_UA: sell_price,
+      SELL_PRICE_PL: sell_price_pl,
+      COUNT: count,
+      DELIVERY_COUNT: delivery_count ? delivery_count : 0,
+      WEIGHT: weight,
+      TYPE: type
+  };
+
+  images.forEach((img, i) => {
+    context[`IMG_${i}`] = img;
+  });
+
+  
+
+  if (price_rule_raw && typeof price_rule_raw === "string") {
+    try {
+      const json = JSON.parse(price_rule_raw);
+      let price_rule = applyExportRules(json, context);
+
+      price_rule.forEach((rule, i) =>{
+        context[`RULE_MIN_${i}`] = rule.min;
+        context[`RULE_MAX_${i}`] = rule.max;
+        context[`RULE_PRICE_${i}`] = rule.price;
+      });
+      //console.log(price_rule);
+    } catch (e) {
+      price_rule = null;
+    }
+  }
+  return context;
+}
+
+//----------------------------------------------------------------------------------------------
+function update_context_with(headers, row_data, context) {
+  const offer_id  = row_data[headers['offer_id']];
+  const available  = row_data[headers['Available']];
+  const sell_price = row_data[headers['Sell Price (UA)']];
+  const delivery_count = row_data[headers['Delivering']];
+
+  context.OFFER_ID = offer_id;
+
+  if (available){
+    context.AVAILABLE = available;
+  }
+
+  if (sell_price){
+    context.SELL_PRICE = sell_price;
+  }
+
+  if (delivery_count){
+    context.DELIVERY_COUNT = delivery_count;
+  }
+
+  const images_raw = row_data[headers['Images']];
+
+  if (images_raw){
+    // remove inherited IMG_* entries
+    for (const key of Object.keys(context)) {
+      if (key.startsWith('IMG_')) {
+        delete context[key];
+      }
+    }
+
+    const images = String(images_raw)
+                    .split(/\r?\n/)
+                    .map(s => s.trim())
+                    .filter(Boolean); // remove empty lines
+
+    images.forEach((img, i) => {
+      context[`IMG_${i}`] = img;
+    });
+  }
+  return context;
+}
+
+//----------------------------------------------------------------------------------------------
+function parse_articul(articul) {
+  const match = articul.match(/^(\d+)(?:-c(\d+))?$/);
+
+  if (!match) {
+    return null; // or throw error if invalid input should not pass
+  }
+
+  const base_id = match[1];
+  const count = match[2] ? parseInt(match[2], 10) : 1;
+
+  return { base_id, count };
+}
+
+//----------------------------------------------------------------------------------------------
+function is_base(articul){
+  articul = String(articul);
+  return !articul.includes('-');
+}
+
+//----------------------------------------------------------------------------------------------
 // Update counts
 //----------------------------------------------------------------------------------------------
 function get_all_items_v2(table_name = 'Articuls_v2') {
@@ -47,72 +180,63 @@ function get_all_items_v2(table_name = 'Articuls_v2') {
                  .getValues()
                  .filter(row => row.some(cell => cell !== '' && cell !== null));
 
-  const items = [];
+  const base_articlule_map = new Map();
 
   data.forEach(row => {
     const offer_id  = row[headers['offer_id']];
-    const brand     = row[headers['Brand']];
-    const market_name = row[headers['Market Name']];
-    const name      = row[headers['Name']];
-    const condition = row[headers['Condition']];
-    const available  = row[headers['Available']];
 
-    const bare_price = row[headers['Ціна поставки (UAH)']];
-    const sell_price = row[headers['Sell Price (UA)']];
-    const sell_price_pl = row[headers['Sell Price (PL)']];
-    const price_rule_raw = row[headers['Price rule(UA)']];
+    if (is_base(offer_id)) {
+      base_articlule_map.set(offer_id, row);
+    }
+  });
 
-    const weight = row[headers['Weight (gr)']];
-    const type = row[headers['Type']];
+  const items = [];
 
-    const count = row[headers['Count']];
-    //const export_rules_raw = row[headers['Export Rules']];
-    const images_raw = row[headers['Images']];
+  data.forEach(row => {
+   
+    const offer_id  = row[headers['offer_id']];
 
-    const export_rules_raw = row[headers['Export Rules']];
+    let context = null;
 
-    const images = (images_raw || "")
-                      .split(/\r?\n/)
-                      .map(s => s.trim())
-                      .filter(Boolean); // remove empty lines
+    if (!is_base(offer_id))
+    {
+      let offer_count = parse_articul(offer_id);
+      if (offer_count === null){
+        console.log("[get_all_items_v2] Parse articul failed:" + offer_id);
+        return;
+      }
 
-    let context = {
-        OFFER_ID: offer_id,
-        BRAND: brand,
-        NAME: name,
-        MARKET_NAME: market_name,
-        CONDITION: condition,
-        AVAILABLE: available,
-        SELL_PRICE: sell_price,
-        SELL_PRICE_UA: sell_price,
-        SELL_PRICE_PL: sell_price_pl,
-        COUNT: count,
-        WEIGHT: weight,
-        TYPE: type
-    };
+      let underlying_row = base_articlule_map.get(Number(offer_count.base_id));
 
-    images.forEach((img, i) => {
-      context[`IMG_${i}`] = img;
-    });
+      if (!underlying_row){
+        console.log("[get_all_items_v2] Underlying not found:" + offer_count.base_id);
+        return;
+      }
+
+      context = fill_item_context(headers, underlying_row);
+
+      if (row != underlying_row){
+        update_context_with(headers, row, context)
+      }
+    }
+    else
+    {
+      context = fill_item_context(headers, row);
+    }
 
     let price_rule = null;
 
+    const price_rule_raw = row[headers['Price rule(UA)']];
     if (price_rule_raw && typeof price_rule_raw === "string") {
       try {
         const json = JSON.parse(price_rule_raw);
         price_rule = applyExportRules(json, context);
-
-        price_rule.forEach((rule, i) =>{
-          context[`RULE_MIN_${i}`] = rule.min;
-          context[`RULE_MAX_${i}`] = rule.max;
-          context[`RULE_PRICE_${i}`] = rule.price;
-        });
-        //console.log(price_rule);
       } catch (e) {
         price_rule = null;
       }
     }
 
+    const export_rules_raw = row[headers['Export Rules']];
     let export_rules = null;
     if (export_rules_raw && typeof export_rules_raw === "string") {
 
@@ -132,20 +256,21 @@ function get_all_items_v2(table_name = 'Articuls_v2') {
         build_xml_tree(xml_root, context);
         export_rules = XmlService.getPrettyFormat().format(doc);
       } catch (e) {
-        console.log("Failed to export:" + offer_id);
+        console.log("Failed to export:" + context.OFFER_ID);
         exprt_rules = null;
       }
     }
 
     items.push({
-        offer_id,
-        name,
-        bare_price,
-        sell_price,
+        offer_id : context.OFFER_ID,
+        name : context.NAME,
+        bare_price : context.BARE_PRICE,
+        sell_price : context.SELL_PRICE,
         price_rule,
         export_rules,
-        count,
-        label: `${name} (${offer_id}) ${bare_price}`
+        count : context.COUNT,
+        delivery_count : context.DELIVERY_COUNT,
+        label: `${context.NAME} (${context.OFFER_ID}) ${context.BARE_PICE}`
       });
   });
 

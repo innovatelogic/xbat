@@ -311,6 +311,8 @@ function build_xml_node(node, context) {
       // Add new CDATA node
       const cdataNode = XmlService.createCdata(newText);
       node.addContent(cdataNode);
+      
+      //node.removeAttribute("cdata");
     } else {
       // Regular text replacement
       const newText = evalFormula(text, context);
@@ -367,7 +369,9 @@ function cloneXmlElement(element) {
   if (text && text.trim() !== "") {
      const useCdata = element.getAttribute("cdata")?.getValue() === "true";
     if (useCdata) {
-      clone.addContent(XmlService.createCdata(text));
+      const cleanText = text.trim();
+      clone.addContent(XmlService.createCdata(cleanText));
+      clone.removeAttribute('cdata');
     } else {
       clone.setText(text);
     }

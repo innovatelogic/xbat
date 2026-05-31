@@ -2,7 +2,7 @@
 //----------------------------------------------------------------------------------------------
 //
 //----------------------------------------------------------------------------------------------
-function getAllItems(table_name = 'Articuls') {
+/*function getAllItems(table_name = 'Articuls') {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error('Sheet "${table_name}" not found!');
@@ -88,5 +88,5 @@ function updateArticulCounts(positions)
   const countRange = sh.getRange(2, 11, lastRow - 1, 1); // column K
   const updatedCounts = data.map(row => [row[countIndex]]);
   countRange.setValues(updatedCounts);
-}
+}*/
 
