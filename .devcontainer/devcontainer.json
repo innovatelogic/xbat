@@ -7,5 +7,14 @@
   "postCreateCommand": "npm install -g @google/clasp",
   "forwardPorts": [],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
-  "workspaceFolder": "/workspace"
+  "workspaceFolder": "/workspace",
+  "customizations":
+  {
+      "vscode":
+      {
+        "extensions": [
+            "tomhoh.vscode-gas-fakes"
+        ]
+    }
+  }
 }

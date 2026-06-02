@@ -1,0 +1,13 @@
+.git/
+
+google-cloud-sdk/
+google-cloud-sdk/**
+src/
+**/src/
+**/src/**
+external/
+**/external/
+**/external/**
+
+
+
