@@ -5,6 +5,54 @@ class Account {
     this._card = context.card;
     this._tax_rule = context.tax_rule;
   }
+
+  static fromRow(row, headers) {
+    return new Account({
+      name: row[headers['Name']],
+      bucket: row[headers['Bucket']],
+      card: row[headers['Card']],
+      tax_rule: row[headers['Tax Rule']]
+    });
+  }
+}
+
+//----------------------------------------------------------------------------------------------
+class AccountService {
+  constructor(gateway) {
+    this.gateway = gateway;
+  }
+  getAccounts() {
+    return this.gateway.load('Accounts_v2');
+  }
+}
+
+//----------------------------------------------------------------------------------------------
+globalThis.AccountSheetGateway =
+class AccountSheetGateway extends globalThis.SheetGateway {
+  constructor(spreadsheet) {
+    super(spreadsheet);
+  }
+  loadTable(tableName) {
+    const sheet = this.getSheet(tableName);
+    const rows = this.getData(sheet);
+    const headers = getColumnIndexes(tableName);
+
+    return { headers, rows };
+  }
+};
+
+//----------------------------------------------------------------------------------------------
+function deserialize_accounts_test(tableName = 'Accounts_v2') {
+  const gateway = new AccountSheetGateway();
+  const { headers, rows } = gateway.loadTable(tableName);
+  return rows.map(row => Account.fromRow(row, headers));
+}
+
+//----------------------------------------------------------------------------------------------
+function test_run_accounts() {
+  const accounts = deserialize_accounts_test();
+  Logger.log(accounts);
+  return accounts;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -84,3 +132,34 @@ function TEST_Process_Tax_Formula() {
   }
   console.log(`✅ ${getCallerFunctionName()} Test passed`);
 }
+
+class MockAccountSheetGateway {
+  loadTable(tableName) {
+    return {
+      headers: {
+        Name: 0,
+        Bucket: 1,
+        Card: 2,
+        'Tax Rule': 3
+      },
+      rows: [
+        ['John', 'Main', 'Visa', 'Rule1'],
+        ['Jane', 'Savings', 'MC', 'Rule2']
+      ]
+    };
+  }
+}
+
+function deserialize_accounts_test_mock(tableName = 'Accounts_v2') {
+  const gateway = new MockAccountSheetGateway();
+  const { headers, rows } = gateway.loadTable(tableName);
+  const accounts = rows.map(row => Account.fromRow(row, headers));
+  return accounts;
+}
+
+function test_mock_accounts() {
+  const accounts = deserialize_accounts_test_mock();
+  Logger.log(accounts);
+  return accounts;
+}
+

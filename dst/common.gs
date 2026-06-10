@@ -31,8 +31,6 @@ function get_currency(table_name = 'Kurs UAH')
   return currency;
 }
 
-
-
 /**
  * Fixes invalid JSON where raw control characters (newline, tab, CR)
  * were inserted inside string values without proper escaping.
