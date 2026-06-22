@@ -7,6 +7,9 @@
   "forwardPorts": [],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
   "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder}/../idoo-merkado,target=/workspace/vendor/idoo-merkado,type=bind,consistency=cached"
+  ],
   "customizations":
   {
       "vscode":

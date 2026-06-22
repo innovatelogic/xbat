@@ -2,6 +2,13 @@
   "name": "workspace",
   "private": true,
   "devDependencies": {
-    "@mcpher/gas-fakes": "latest"
+    "@mcpher/gas-fakes": "latest",
+    "esbuild": "^0.25.0"
+  },
+  "dependencies": {
+    "idoo-merkado": "file:./vendor/idoo-merkado"
+  },
+  "scripts": {
+    "build:merkado:gas": "bash -lc 'mkdir -p /workspace/.generated/dst /workspace/dst; OUT=/workspace/.generated/dst/00_merkado.gs; : > \"$OUT\"; find /workspace/vendor/idoo-merkado/dst -maxdepth 1 -type f -name \"*.gs\" ! -name \"appsscript.json\" | sort | while read -r f; do printf \"// --- %s ---\\n\" \"$f\" >> \"$OUT\"; cat \"$f\" >> \"$OUT\"; printf \"\\n\" >> \"$OUT\"; done; printf \";globalThis.Merkado={myFunction:myFunction};\\n\" >> \"$OUT\"; cp \"$OUT\" /workspace/dst/00_merkado.gs'"
   }
 }
