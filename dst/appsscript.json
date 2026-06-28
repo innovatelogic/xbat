@@ -5,10 +5,9 @@
   "dependencies": {
     "libraries": [
       {
-        "userSymbol": "IdooMerkado",
-        "version": "0",
+        "userSymbol": "IdM",
         "libraryId": "19HpKgOrmSOMrqwpczdvP5Rd5yVZYEpBCFW5bM5HfNJTKiNHT_4P2iuME",
-        "developmentMode": true
+        "version": "13"
       }
     ]
   },

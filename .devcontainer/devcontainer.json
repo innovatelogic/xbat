@@ -15,7 +15,8 @@
       "vscode":
       {
         "extensions": [
-            "tomhoh.vscode-gas-fakes"
+          "tomhoh.vscode-gas-fakes",
+          "jaime-hr.node-watch"
         ]
     }
   }

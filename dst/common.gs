@@ -249,7 +249,7 @@ function evalFormula(str, context, forceStringMode = false) {
 //----------------------------------------------------------------------------------------------
 // Apply export rules to XML string
 //----------------------------------------------------------------------------------------------
-function applyExportRulesXML(xmlString, context) {
+/*function applyExportRulesXML(xmlString, context) {
   const doc = XmlService.parse(xmlString);
   const root = doc.getRootElement();
 
@@ -263,7 +263,7 @@ function build_xml_tree(xml_node, context) {
   if (!xml_node) { return; }
   
   walkXmlNode(xml_node, context);
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Build context recursively

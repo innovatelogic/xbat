@@ -269,7 +269,7 @@ function build_xml_tree(xml_node, context) {
 // Build context recursively
 // returns new context
 //----------------------------------------------------------------------------------------------
-function build_node(node, context){
+/*function build_node(node, context){
   let new_context = { ... context};
   if (!node){ return new_context; }
 
@@ -317,12 +317,12 @@ function build_xml_node(node, context) {
       node.setText(newText);
     }
   }
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Walk XML DOM
 //----------------------------------------------------------------------------------------------
-function walkXmlNode(node, context) {
+/*function walkXmlNode(node, context) {
 
   build_xml_node(node, context);
 
@@ -343,7 +343,7 @@ function equal_xml(actual, expected) {
     .format(XmlService.parse(expected));
 
   return a === b;
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Clone recursively

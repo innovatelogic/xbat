@@ -121,7 +121,7 @@ function TEST_Process_Tax_Formula() {
     };
 
   const expected_tax = weight * transfer + (full_price * 0.01);
-  const tax_rule_str = evalFormula(tax_rule, context);
+  const tax_rule_str = IdM.IdM_eval_formula(tax_rule, context);
 
   const rule_obj = JSON.parse(tax_rule_str);
 

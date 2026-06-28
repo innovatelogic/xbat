@@ -1,4 +1,4 @@
-class Articul {
+/*class Articul {
   constructor(context){
     this._offer_id = context.offer_id;
     this._brand = context.brand;
@@ -302,4 +302,6 @@ function TEST_ArticulObject(){
     throw new Error(`Test failed. Expected ${expected}, got >>>> ${export_rules_xml}`);
   }
   console.log(`✅ ${getCallerFunctionName()} Test passed`);
-}
+}*/
+
+

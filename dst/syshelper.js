@@ -41,7 +41,7 @@ function cleanOldVersions() {
 //----------------------------------------------------------------------------------------------
 // Returns current function name
 //----------------------------------------------------------------------------------------------
-function getCallerFunctionName() {
+/*function getCallerFunctionName() {
   const stack = new Error().stack.split("\n");
   // stack[0] = "Error"
   // stack[1] = at getCurrentFunctionName
@@ -58,4 +58,4 @@ function getTimestamp() {
     ss.getSpreadsheetTimeZone(),
     "yyyy-MM-dd HH:mm:ss"
   );
-}
+}*/
