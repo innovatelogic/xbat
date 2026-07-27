@@ -96,7 +96,6 @@ function deserialize_accounts(table_name = 'Accounts_v2'){
 function get_account_buckets(table_name = "Accounts_v2")
 {
   const accounts = deserialize_accounts(table_name);
-
   const buckets = new Map();
 
   accounts.forEach(a => {
@@ -163,3 +162,7 @@ function test_mock_accounts() {
   return accounts;
 }
 
+function idm_deserialize_accounts()
+{
+  return deserialize_accounts();
+}

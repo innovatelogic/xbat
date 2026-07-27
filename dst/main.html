@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+
+    <script>
+      window.SPA_MODE = true;
+    </script>
+
+    <?!= include('styles'); ?>
+    <?!= include('styles_topnav'); ?>
+    <?!= include('add_order_js'); ?>
+    <?!= include('order_processor_js'); ?>
+  </head>
+<body>
+
+<div class="topnav">
+  <a class="#" href="#" onclick="loadPage('order_processor'); return false;">Home</a>
+  <a href="#" onclick="loadPage('add_order'); return false;">New order</a>
+  <a href="#" onclick="loadPage('order_processor'); return false;">Modify order</a>
+  <a href="#" onclick="loadPage('order_processor'); return false;">Articuls</a>
+  <a href="#" onclick="loadPage('order_processor'); return false;">Calculate</a>
+  <a href="#" onclick="loadPage('order_processor'); return false;">Export</a>
+</div>
+
+<main id="content">
+  Loading...
+</main>
+
+
+<script>
+
+const initialPage = "<?= page ?>";
+
+function loadPage(page) {
+
+  google.script.run
+    .withSuccessHandler(function(html) {
+
+      document.getElementById("content").innerHTML = html;
+      if (typeof window[page + "_init"] === "function") {
+        window[page + "_init"]();
+      }
+    })
+    .render_page(page);
+}
+
+loadPage(initialPage);
+
+</script>
+
+</body>
+</html>

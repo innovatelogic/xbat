@@ -40,7 +40,7 @@ function get_currency(table_name = 'Kurs UAH')
  * - Only converts illegal characters that break JSON.parse
  * - Safe to run before JSON.parse as a recovery step
  */
-function fixBrokenJsonStrings(json) {
+/*function fixBrokenJsonStrings(json) {
   let inString = false;   // Are we currently inside a "string" value
   let escaped = false;    // Was previous char a backslash (escape marker)
   let result = "";
@@ -87,7 +87,7 @@ function fixBrokenJsonStrings(json) {
   }
 
   return result;
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Evaluate formula
@@ -249,7 +249,7 @@ function evalFormula(str, context, forceStringMode = false) {
 //----------------------------------------------------------------------------------------------
 // Apply export rules to XML string
 //----------------------------------------------------------------------------------------------
-/*function applyExportRulesXML(xmlString, context) {
+function applyExportRulesXML(xmlString, context) {
   const doc = XmlService.parse(xmlString);
   const root = doc.getRootElement();
 
@@ -263,7 +263,7 @@ function build_xml_tree(xml_node, context) {
   if (!xml_node) { return; }
   
   walkXmlNode(xml_node, context);
-}*/
+}
 
 //----------------------------------------------------------------------------------------------
 // Build context recursively

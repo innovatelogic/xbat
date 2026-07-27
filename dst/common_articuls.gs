@@ -23,9 +23,9 @@ function walk(node, context) {
 //----------------------------------------------------------------------------------------------
 // 
 //----------------------------------------------------------------------------------------------
-/*function applyExportRules(obj, context) {
+function applyExportRules(obj, context) {
   return walk(obj, context);
-}*/
+}
 
 //----------------------------------------------------------------------------------------------
 function fill_item_context(headers, row_data){

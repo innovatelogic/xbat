@@ -6,6 +6,7 @@ function export_all()
   export_prom_articuls();
   export_rozetka_articuls();
   export_xbat_com_ua_articuls();
+  export_rosport();
 }
 
 //----------------------------------------------------------------------------------------------
@@ -80,7 +81,7 @@ function export_prom_articuls(arg)
 
   //console.log(xmlString);
 
-  uploadToS3(xmlString, filepath);
+  IdM.upload_to_s3(xmlString, filepath, getSecrets);
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
@@ -187,7 +188,7 @@ function export_rozetka_articuls(arg)
   // Convert to string
   const xml_string = XmlService.getPrettyFormat().format(doc);
 
-  uploadToS3(xml_string, filepath);
+  IdM.upload_to_s3(xml_string, filepath, getSecrets);
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
@@ -270,7 +271,7 @@ function export_xbat_com_ua_articuls(arg)
   // Convert to string
   const xml_string = XmlService.getPrettyFormat().format(doc);
 
-  uploadToS3(xml_string, filepath);
+  IdM.upload_to_s3(xml_string, filepath, getSecrets);
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
@@ -285,6 +286,114 @@ function export_xbat_com_ua_articuls(arg)
     ["#00ff00", "#00ff00"],
     ["#00ff00", "#00ff00"]
   ]);
+}
+
+//----------------------------------------------------------------------------------------------
+// rosport export function
+//----------------------------------------------------------------------------------------------
+function export_rosport()
+{
+  const logger = new ScopedLogger("export_rosport_articuls");
+
+  logger.log("start export");
+
+  const source_url = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
+  const target_path = "xbat/rosport/rosport.xml";
+
+  IdM._del_s3(target_path, getSecrets);
+
+  download_to_s3_with_price_update(source_url, target_path, getSecrets);
+
+  const url = 'https://idoo-public.s3.eu-central-1.amazonaws.com/' + target_path;
+
+  writeRange(
+  "Dashboard", [["Export", url], [getTimestamp(), logger.flush()]],
+    13,1,
+  [
+    ["#000000", "#000000"],
+    ["#000000", "#000000"]
+  ],
+  [
+    ["#00ff00", "#00ff00"],
+    ["#00ff00", "#00ff00"]
+  ]);
+}
+
+//----------------------------------------------------------------------------------------------
+function download_to_s3_with_price_update(url, filename, secrets_fn) {
+
+  const response = UrlFetchApp.fetch(url, {
+    muteHttpExceptions: true
+  });
+
+  if (response.getResponseCode() !== 200) {
+    throw new Error(
+      "Download failed: " + response.getResponseCode()
+    );
+  }
+
+
+  // One copy only
+  let xml = response.getContentText("UTF-8");
+
+
+  xml = xml.replace(
+    /(<price>)([\d.]+)(<\/price>)/g,
+    function(match, open, value, close) {
+
+      const price = Number(value);
+
+      if (isNaN(price)) {
+        return match;
+      }
+
+      const newPrice =
+        Math.ceil((price * 1.15) / 5) * 5;
+
+      return open + newPrice + close;
+    }
+  );
+
+
+  IdM.upload_to_s3(
+    xml,
+    filename,
+    secrets_fn
+  );
+
+  return true;
+}
+
+function TEST_download()
+{
+  const sourceUrl = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
+  const targetPath = "xbat/rosport/data.xml";
+  
+  IdM._del_s3(targetPath, getSecrets);
+
+  // Pass your secrets mapping function as the final callback parameter
+  IdM.download_drv3(sourceUrl, targetPath, getSecrets);
+}
+
+function TEST_download_upd()
+{
+  const sourceUrl = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
+  const targetPath = "xbat/rosport/rosport.xml";
+
+  IdM._del_s3(targetPath, getSecrets);
+
+  download_to_s3_with_price_update(sourceUrl, targetPath, getSecrets);
+}
+
+function TEST_download_streamed()
+{
+  const sourceUrl = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
+  const targetPath = "xbat/rosport/streamed.xml";
+  
+  IdM._del_s3(targetPath, getSecrets);
+
+  // Pass your secrets mapping function as the final callback parameter
+  IdM.download_to_s3_stream(sourceUrl, targetPath, getSecrets);
 }
 
 

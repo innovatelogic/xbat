@@ -49,36 +49,22 @@ function get_table_row_map(table_name) {
 function get_config_value(key)
 {
   const table_name = ".config";
-  const rows = get_table_row_map(table_name);
-
-  if (!(key in rows)){
-    throw new Error(`[get_config_value] error: no "${key}" found!`);
-  }
-
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error(`[get_config_value] error: "${table_name}" not found!`);
 
-  return sh.getRange(rows[key], 2).getValue();
+  return IdM.get_config_value(sh, key);
 }
 
 //----------------------------------------------------------------------------------------------
 function get_currency_rate(curr1, curr2){
-  const raw = get_config_value(".Currency");
 
-  if (curr1 == '' || curr2 == ''){
-    throw new Error(`[get_currency_rate] error: empty currency value!`);
-  }
+  const table_name = ".config";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(table_name);
+  if (!sh) throw new Error(`[get_config_value] error: "${table_name}" not found!`);
 
-  if (curr1 == curr2){
-    return 1.0;
-  }
-
-  const rates = typeof raw === "string"
-    ? JSON.parse(raw)
-    : raw;
-
-  return rates["Currency"][curr1][curr2];
+  return IdM.get_currency_rate(sh, curr1, curr2);
 }
 
 //----------------------------------------------------------------------------------------------
@@ -102,5 +88,15 @@ function TEST_read_config_sheet()
 
   const uah_pln_rate = get_currency_rate("UAH", "PLN");
 
-  console.log(`✅ ${getCallerFunctionName()} Test passed`);
+  console.log(`✅ ${IdM.get_caller_function_name()} Test passed`);
+}
+
+//----------------------------------------------------------------------------------------------
+function TEST_read_config_lib()
+{
+  const table_name = ".config";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(table_name);
+  const uah_pln_rate = IdM.get_currency_rate(sh, "UAH", "PLN");
+  console.log(`✅ ${IdM.get_caller_function_name()} Test passed`);
 }

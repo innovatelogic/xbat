@@ -3,17 +3,24 @@
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "serviceId": "drive",
+        "version": "v3"
+      }
+    ],
     "libraries": [
       {
         "userSymbol": "IdM",
         "libraryId": "19HpKgOrmSOMrqwpczdvP5Rd5yVZYEpBCFW5bM5HfNJTKiNHT_4P2iuME",
-        "version": "13"
+        "version": "77"
       }
     ]
   },
   "webapp": {
     "executeAs": "USER_DEPLOYING",
-    "access": "DOMAIN"
+    "access": "ANYONE"
   },
   "oauthScopes": [
     "https://www.googleapis.com/auth/script.scriptapp",
@@ -22,6 +29,8 @@
     "https://www.googleapis.com/auth/script.container.ui",
     "https://www.googleapis.com/auth/script.projects",
     "https://www.googleapis.com/auth/script.deployments",
-    "https://www.googleapis.com/auth/script.external_request"
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/drive"
   ]
 }
