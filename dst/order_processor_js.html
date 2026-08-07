@@ -36,8 +36,10 @@ if (!window.SPA_MODE) {
 //----------------------------------------------------------------------------------------------
 function init_form(table_name) {
 
-  g_active_table = table_name;
+  console.log('[init_form]: ' + table_name);
 
+  g_active_table = table_name;
+  
   google.script.run.withSuccessHandler(function(data) {
     
     console.log("Bucket data fetched");
@@ -69,7 +71,10 @@ function init_form(table_name) {
 
     disableConfirmBtn(false);
 
-  }).prepare_calculation_info(table_name);
+  }).withFailureHandler(function(error) {
+      console.error("prepare_calculation_info failed:", error);
+  })
+  .prepare_calculation_info(table_name);
 }
 
 //----------------------------------------------------------------------------------------------

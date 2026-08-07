@@ -1,0 +1,17 @@
+<script>
+
+function init_topnav()
+{
+
+  console.log("init_topnav begin");
+
+  google.script.run.withSuccessHandler(function(text) {
+    console.log("init_topnav: " + text);
+
+    const span = document.getElementById("id_topnav_sku_name");
+    span.textContent = text;
+    
+  }).get_sku_name();
+}
+
+</script>

@@ -53,7 +53,9 @@ function export_prom_articuls(arg)
 
   nd_shop.addContent(nd_offers); // add offers under shop
 
-  const items = get_all_items_v2();
+  const user = IdM.get_current_user();
+  const items = IdM.get_all_articuls(user.sheet("Articuls_v2"));
+  //const items = get_all_items_v2();
 
   items.forEach(offer => {
     if (offer.export_rules == null) {
@@ -70,7 +72,7 @@ function export_prom_articuls(arg)
     if (!src_offer) { return; }
 
     if (src_offer){
-      nd_offers.addContent(cloneXmlElement(src_offer));
+      nd_offers.addContent(IdM.clone_xml_element(src_offer));
     }
   });
   
@@ -120,9 +122,9 @@ function export_rozetka_articuls(arg)
   root.addContent(shop);
 
 
-  add_xml_node_text(shop, "name", get_shop_name());
-  add_xml_node_text(shop, "company", get_company_name());
-  add_xml_node_text(shop, "url", get_company_url());
+  IdM.add_xml_node_text(shop, "name", get_shop_name());
+  IdM.add_xml_node_text(shop, "company", get_company_name());
+  IdM.add_xml_node_text(shop, "url", get_company_url());
 
   const currencies = XmlService.createElement('currencies');
 
@@ -161,7 +163,9 @@ function export_rozetka_articuls(arg)
   }
   shop.addContent(categories);
 
-  const items = get_all_items_v2();
+  const user = IdM.get_current_user();
+  const items = IdM.get_all_articuls(user.sheet("Articuls_v2"));
+  //const items = get_all_items_v2();
 
   items.forEach(offer => {
     if (offer.export_rules == null) {
@@ -177,7 +181,7 @@ function export_rozetka_articuls(arg)
     if (!src_offer) { return; }
 
     if (src_offer){
-      offers.addContent(cloneXmlElement(src_offer));
+      offers.addContent(IdM.clone_xml_element(src_offer));
     }
   });
 
@@ -227,9 +231,9 @@ function export_xbat_com_ua_articuls(arg)
   root.addContent(shop);
 
 
-  add_xml_node_text(shop, "name", get_shop_name());
-  add_xml_node_text(shop, "company", get_company_name());
-  add_xml_node_text(shop, "url", get_company_url());
+  IdM.add_xml_node_text(shop, "name", get_shop_name());
+  IdM.add_xml_node_text(shop, "company", get_company_name());
+  IdM.add_xml_node_text(shop, "url", get_company_url());
 
   const categories = XmlService.createElement('categories');
 
@@ -244,8 +248,10 @@ function export_xbat_com_ua_articuls(arg)
   }
   shop.addContent(categories);
 
-  const items = get_all_items_v2();
-
+  const user = IdM.get_current_user();
+  const items = IdM.get_all_articuls(user.sheet("Articuls_v2"));
+  //const items = get_all_items_v2();
+  
   items.forEach(offer => {
     if (offer.export_rules == null) {
       return;
@@ -260,7 +266,7 @@ function export_xbat_com_ua_articuls(arg)
     if (!src_offer) { return; }
 
     if (src_offer){
-      offers.addContent(cloneXmlElement(src_offer));
+      offers.addContent(IdM.clone_xml_element(src_offer));
     }
   });
 
@@ -364,6 +370,7 @@ function download_to_s3_with_price_update(url, filename, secrets_fn) {
   return true;
 }
 
+//----------------------------------------------------------------------------------------------
 function TEST_download()
 {
   const sourceUrl = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
@@ -395,6 +402,18 @@ function TEST_download_streamed()
   // Pass your secrets mapping function as the final callback parameter
   IdM.download_to_s3_stream(sourceUrl, targetPath, getSecrets);
 }
+
+function TEST_GetItems()
+{
+  const user = IdM.get_current_user();
+  const items = IdM.get_all_articuls(user.sheet("Articuls_v2")); 
+  console.log(`${JSON.stringify(items, null, 2)}`);
+}
+
+
+
+
+
 
 
 

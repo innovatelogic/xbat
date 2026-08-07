@@ -1,8 +1,6 @@
 function add_order_impl(data){
-    console.log("[add_order_impl] begin:");
     const user = IdM.get_current_user();
     const ss = user.spreadsheet();
-    console.log("[add_order_impl] IdM.add_order");
     return IdM.add_order(ss, data);
 }
 

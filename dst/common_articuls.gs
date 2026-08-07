@@ -2,7 +2,7 @@
 //----------------------------------------------------------------------------------------------
 // iterate through nodes
 //----------------------------------------------------------------------------------------------
-function walk(node, context) {
+/*function walk(node, context) {
   if (Array.isArray(node)) {
     return node.map(n => walk(n, context));
   }
@@ -82,7 +82,7 @@ function fill_item_context(headers, row_data){
   if (price_rule_raw && typeof price_rule_raw === "string") {
     try {
       const json = JSON.parse(price_rule_raw);
-      let price_rule = applyExportRules(json, context);
+      let price_rule = IdM.apply_export_rules(json, context);
 
       price_rule.forEach((rule, i) =>{
         context[`RULE_MIN_${i}`] = rule.min;
@@ -95,10 +95,10 @@ function fill_item_context(headers, row_data){
     }
   }
   return context;
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
-function update_context_with(headers, row_data, context) {
+/*function update_context_with(headers, row_data, context) {
   const offer_id  = row_data[headers['offer_id']];
   const available  = row_data[headers['Available']];
   const sell_price = row_data[headers['Sell Price (UA)']];
@@ -138,10 +138,10 @@ function update_context_with(headers, row_data, context) {
     });
   }
   return context;
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
-function parse_articul(articul) {
+/*function parse_articul(articul) {
   const match = articul.match(/^(\d+)(?:-c(\d+))?$/);
 
   if (!match) {
@@ -152,18 +152,18 @@ function parse_articul(articul) {
   const count = match[2] ? parseInt(match[2], 10) : 1;
 
   return { base_id, count };
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
-function is_base(articul){
+/*function is_base(articul){
   articul = String(articul);
   return !articul.includes('-');
-}
+}*/
 
 //----------------------------------------------------------------------------------------------
 // Update counts
 //----------------------------------------------------------------------------------------------
-function get_all_items_v2(table_name = 'Articuls_v2') {
+/*function get_all_items_v2(table_name = 'Articuls_v2') {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(table_name);
   if (!sh) throw new Error('Sheet "${table_name}" not found!');
@@ -230,7 +230,7 @@ function get_all_items_v2(table_name = 'Articuls_v2') {
     if (price_rule_raw && typeof price_rule_raw === "string") {
       try {
         const json = JSON.parse(price_rule_raw);
-        price_rule = applyExportRules(json, context);
+        price_rule = IdM.apply_export_rules(json, context);
       } catch (e) {
         price_rule = null;
       }
@@ -275,11 +275,11 @@ function get_all_items_v2(table_name = 'Articuls_v2') {
   });
 
   return items;
-}
+}*/
 //----------------------------------------------------------------------------------------------
 //
 //----------------------------------------------------------------------------------------------
-function xmlToNormalizedString(xml) {
+/*function xmlToNormalizedString(xml) {
   const doc = XmlService.parse(xml);
   return XmlService.getCompactFormat().format(doc);
 }
@@ -310,7 +310,7 @@ function TEST_applyExportRulesXML(){
                               {"min":1000, "max":999999999, "price":"ceil5(\${SELL_PRICE} * 1.1)"}]`;
 
     const price_rule_json = JSON.parse(price_rule_raw);
-    const price_rule = applyExportRules(price_rule_json, context);
+    const price_rule = IdM.apply_export_rules(price_rule_json, context);
 
     price_rule.forEach((rule, i) =>{
       context[`RULE_MIN_${i}`] = rule.min;
@@ -431,6 +431,6 @@ function TEST_applyExportRulesXML(){
   }
 
   console.log(`✅ ${getCallerFunctionName()} Test passed`);
-}
+}*/
 
 

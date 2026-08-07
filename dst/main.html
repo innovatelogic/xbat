@@ -11,8 +11,11 @@
     <?!= include('styles_topnav'); ?>
     <?!= include('add_order_js'); ?>
     <?!= include('order_processor_js'); ?>
+    <?!= include('user_topnav_js'); ?>
   </head>
 <body>
+
+<?!= include('user_topnav'); ?>
 
 <div class="topnav">
   <a class="#" href="#" onclick="loadPage('order_processor'); return false;">Home</a>
@@ -38,6 +41,9 @@ function loadPage(page) {
     .withSuccessHandler(function(html) {
 
       document.getElementById("content").innerHTML = html;
+
+      init_topnav();
+      
       if (typeof window[page + "_init"] === "function") {
         window[page + "_init"]();
       }

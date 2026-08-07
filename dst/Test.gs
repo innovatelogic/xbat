@@ -1,5 +1,4 @@
-//----------------------------------------------------------------------------------------------
-//
+
 //----------------------------------------------------------------------------------------------
 function TEST_PrepareCalculationInfo() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -26,8 +25,6 @@ function TEST_PrepareCalculationInfo() {
   html.removed_orders = removed_orders_json;
 }
 
-//----------------------------------------------------------------------------------------------
-//
 //----------------------------------------------------------------------------------------------
 function TEST_onCalculationConfirmed(backets_str) {
   const data = `
@@ -74,7 +71,80 @@ function TEST_onCalculationConfirmed(backets_str) {
 }
 
 //----------------------------------------------------------------------------------------------
-//
+function TEST_GetConfigDefaultString() {
+  const user = IdM.get_current_user();
+  const val = IdM.get_config_value_def(user.sheet(".config"), `sku_name`, `Non-Valid`);
+  const val_def = IdM.get_config_value_def(user.sheet(".config"), `not_exist.tag_name`, `Non-Valid`);
+
+  console.log(val);
+  console.log(val_def); 
+}
+
+//----------------------------------------------------------------------------------------------
+function TEST_read_config_sheet()
+{
+  const table_name = ".config";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(table_name);
+  if (!sh) throw new Error(`[get_config_value] error: "${table_name}" not found!`);
+
+  const uah_uah = IdM.get_currency_rate_v2(sh, "UAH", "UAH");
+
+  if (uah_uah != 1.0) {
+    throw new Error(`[TEST_read_config_sheet] get_currency_rate error: invalid rate!`);
+  }
+
+  const uah_pln_rate = IdM.get_currency_rate_v2(sh, "UAH", "PLN");
+
+  console.log(`✅ ${IdM.get_caller_function_name()} Test passed`);
+}
+
+//----------------------------------------------------------------------------------------------
+function TEST_read_config_lib()
+{
+  const table_name = ".config";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(table_name);
+  const uah_pln_rate = IdM.get_currency_rate(sh, "UAH", "PLN");
+  console.log(`✅ ${IdM.get_caller_function_name()} Test passed`);
+}
+
+//----------------------------------------------------------------------------------------------
+function TEST_Add_order()
+{
+  const user = IdM.get_current_user();
+  const sh = user.sheet();
+
+  const testData = {
+    client_info: "Test Client",
+    payment: "Cash",
+    notes: "Test note",
+    total_price: 300,
+    positions: [
+      {
+        offer_id: 61000,
+        item_name: "Item1",
+        count: 2,
+        bare_price: 50,
+        pos_price: 150,
+        profit: 20,
+        tax: 5
+      },
+      {
+        offer_id: 61009,
+        item_name: "Item2",
+        count: 1,
+        bare_price: 100,
+        pos_price: 150,
+        profit: 30,
+        tax: 10
+      }
+    ]
+  };
+
+  //const result = add_order("Orders_v2", testData);
+}
+
 //----------------------------------------------------------------------------------------------
 function runAllTests() {
   const tests = Object.keys(this)
