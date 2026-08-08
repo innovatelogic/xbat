@@ -25,7 +25,7 @@ function export_prom_articuls(arg)
 {
   const filepath = (typeof arg === 'string') ? arg : 'xbat/export/prom.xml';
 
-  const logger = new ScopedLogger("export_prom_articuls");
+  const logger = IdM.create_scoped_logger("export_prom_articuls");
 
   logger.log("start export");
 
@@ -55,7 +55,6 @@ function export_prom_articuls(arg)
 
   const user = IdM.get_current_user();
   const items = IdM.get_all_articuls(user.sheet("Articuls_v2"));
-  //const items = get_all_items_v2();
 
   items.forEach(offer => {
     if (offer.export_rules == null) {
@@ -87,9 +86,8 @@ function export_prom_articuls(arg)
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
-  writeRange(
-  "Dashboard", [["Export", "Prom"], [getTimestamp(), logger.flush()]],
-    1,1,
+  IdM.write_range(user.sheet("Dashboard"),
+   [["Export", "Prom"], [IdM.get_timestamp(), logger.flush()]], 1,1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]
@@ -108,7 +106,7 @@ function export_rozetka_articuls(arg)
 {
   const filepath = (typeof arg === 'string') ? arg : 'xbat/export/rozetka.xml';
 
-  const logger = new ScopedLogger("export_rozetka_articuls");
+  const logger = IdM.create_scoped_logger("export_rozetka_articuls");
 
   logger.log("start export");
 
@@ -196,9 +194,8 @@ function export_rozetka_articuls(arg)
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
-  writeRange(
-  "Dashboard", [["Export", "Rozetka"], [getTimestamp(), logger.flush()]],
-    5,1,
+  IdM.write_range(user.sheet("Dashboard"),
+  [["Export", "Rozetka"], [IdM.get_timestamp(), logger.flush()]], 5, 1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]
@@ -217,7 +214,7 @@ function export_xbat_com_ua_articuls(arg)
 {
   const filepath = (typeof arg === 'string') ? arg : 'xbat/export/xbat-com-ua.xml';
 
-  const logger = new ScopedLogger("export_xbat_com_ua_articuls");
+  const logger = IdM.create_scoped_logger("export_xbat_com_ua_articuls");
 
   logger.log("start export");
 
@@ -281,9 +278,8 @@ function export_xbat_com_ua_articuls(arg)
 
   logger.log("finish export to: https://idoo-public.s3.eu-central-1.amazonaws.com/" + filepath);
 
-    writeRange(
-  "Dashboard", [["Export", "Xbat.com.ua"], [getTimestamp(), logger.flush()]],
-    9,1,
+  IdM.write_range(user.sheet("Dashboard"),
+  [["Export", "Xbat.com.ua"], [IdM.get_timestamp(), logger.flush()]], 9, 1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]
@@ -299,7 +295,7 @@ function export_xbat_com_ua_articuls(arg)
 //----------------------------------------------------------------------------------------------
 function export_rosport()
 {
-  const logger = new ScopedLogger("export_rosport_articuls");
+  const logger = IdM.create_scoped_logger("export_rosport_articuls");
 
   logger.log("start export");
 
@@ -312,9 +308,9 @@ function export_rosport()
 
   const url = 'https://idoo-public.s3.eu-central-1.amazonaws.com/' + target_path;
 
-  writeRange(
-  "Dashboard", [["Export", url], [getTimestamp(), logger.flush()]],
-    13,1,
+  const user = IdM.get_current_user();
+  IdM.write_range(user.sheet("Dashboard"),
+  [["Export", url], [IdM.get_timestamp(), logger.flush()]], 13, 1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]

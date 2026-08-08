@@ -1,4 +1,4 @@
-class ScopedLogger {
+/*class ScopedLogger {
   constructor(scope, parent = null) {
     this.scope = scope;
     this.parent = parent;
@@ -57,4 +57,4 @@ class ScopedLogger {
 
     return output;
   }
-}
+}*/

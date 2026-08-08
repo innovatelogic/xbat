@@ -51,6 +51,7 @@ function getCallerFunctionName() {
   return match ? match[1] : "unknown";
 }
 
+/*
 function getTimestamp() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   return Utilities.formatDate(
@@ -58,4 +59,4 @@ function getTimestamp() {
     ss.getSpreadsheetTimeZone(),
     "yyyy-MM-dd HH:mm:ss"
   );
-}
+}*/

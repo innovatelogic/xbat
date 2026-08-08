@@ -15,7 +15,7 @@
   </head>
 <body>
 
-<?!= include('user_topnav'); ?>
+<?!= include('user_topnav', { sku_name: sku_name }); ?>
 
 <div class="topnav">
   <a class="#" href="#" onclick="loadPage('order_processor'); return false;">Home</a>
@@ -42,7 +42,7 @@ function loadPage(page) {
 
       document.getElementById("content").innerHTML = html;
 
-      init_topnav();
+      //init_topnav();
       
       if (typeof window[page + "_init"] === "function") {
         window[page + "_init"]();
