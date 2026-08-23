@@ -49,7 +49,73 @@ function get_config_transfer_price(){
 
 //----------------------------------------------------------------------------------------------
 function idm_deserialize_articuls() {
-  return IdM.deserialize_articuls();
+  console.time('idm_deserialize_articuls');
+  const result = _deserialize_articuls(); //IdM.deserialize_articuls();
+  console.timeEnd('idm_deserialize_articuls');
+  return result;
+}
+
+//----------------------------------------------------------------------------------------------
+function _deserialize_articuls()
+{
+  console.time('_deserialize_articuls');
+
+  const user = IdM.get_current_user();
+
+  const ss = user.sheet('Articuls_v2');
+
+  const data = IdM.deserialize_data(ss);
+  
+  const headers = IdM.get_table_header_map_sheet(ss);
+
+  const _idx_offer_id = headers['offer_id'];
+  const _idx_brand = headers['Brand'];
+  const _idx_name = headers['Name'];
+  const _idx_market_name = headers['Market Name'];
+  const _idx_condition = headers['Condition'];
+  const _idx_available = headers['Available'];
+  const _idx_bare_price = headers['Ціна поставки (UAH)'];
+  const _idx_sell_price = headers['Sell Price (UA)'];
+  const _idx_sell_price_ua = headers['Sell Price (UA)'];
+  const _idx_sell_price_pl = headers['Sell Price (UA)'];
+  const _idx_count = headers['Count'];
+  const _idx_weight = headers['Weight (gr)'];
+  const _idx_type = headers['Type'];
+  const _idx_images_raw = headers['Images'];
+  const _idx_export_rules_raw = headers['Export Rules'];
+  const _idx_price_rules_raw = headers['Price rule(UA)'];
+  const _idx_price_rules_UA_raw = headers['Price rule(UA)'];
+  const _idx_price_rules_PL_raw = headers['Price rule(PL)'];
+
+  let articuls = [];
+
+  data.forEach(row => {
+
+      const context = {
+        offer_id: row[_idx_offer_id],
+        brand: row[_idx_brand],
+        name: row[_idx_name],
+        market_name: row[_idx_market_name],
+        condition: row[_idx_condition],
+        available: row[_idx_available],
+        bare_price: row[_idx_bare_price],
+        sell_price: row[_idx_sell_price],
+        sell_price_ua: row[_idx_sell_price_ua],
+        sell_price_pl: row[_idx_sell_price_pl],
+        count: row[_idx_count],
+        weight: row[_idx_weight] / 1000,
+        type: row[_idx_type],
+        images_raw : row[_idx_images_raw],
+        export_rules_raw : row[_idx_export_rules_raw],
+        price_rules_raw: row[_idx_price_rules_raw],   // default UA price rule
+        price_rules_UA_raw: row[_idx_price_rules_UA_raw],
+        price_rules_PL_raw: row[_idx_price_rules_PL_raw],
+      };
+
+      articuls.push(IdM.alloc_new_Articul(context));
+  });
+  console.timeEnd('_deserialize_articuls');
+  return articuls;
 }
 
 //----------------------------------------------------------------------------------------------

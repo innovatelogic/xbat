@@ -14,12 +14,12 @@
       {
         "userSymbol": "IdM",
         "libraryId": "19HpKgOrmSOMrqwpczdvP5Rd5yVZYEpBCFW5bM5HfNJTKiNHT_4P2iuME",
-        "version": "136"
+        "version": "148"
       }
     ]
   },
   "webapp": {
-    "executeAs": "USER_DEPLOYING",
+    "executeAs": "USER_ACCESSING",
     "access": "ANYONE"
   },
   "oauthScopes": [

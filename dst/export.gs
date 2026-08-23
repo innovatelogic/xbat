@@ -295,22 +295,30 @@ function export_xbat_com_ua_articuls(arg)
 //----------------------------------------------------------------------------------------------
 function export_rosport()
 {
-  const logger = IdM.create_scoped_logger("export_rosport_articuls");
+  _export_rosport();
 
-  logger.log("start export");
+  /*const lambdaUrl = "https://nxnjojze253hw2vowgnzeobmpu0yuqei.lambda-url.eu-central-1.on.aws/";
 
-  const source_url = "https://rosport.in.ua/products_feed.xml?hash_tag=cf62187e66846c062ad06fe2542059e6&sales_notes=&product_ids=&label_ids=&exclude_fields=&html_description=0&yandex_cpa=&process_presence_sure=&languages=uk%2Cru&group_ids=25765246%2C25810144&nested_group_ids=25765246%2C25810144&extra_fields=keywords";
-  const target_path = "xbat/rosport/rosport.xml";
+  const response = UrlFetchApp.fetch(lambdaUrl, {
+    method: "post",
+    muteHttpExceptions: true
+  });
 
-  IdM._del_s3(target_path, getSecrets);
+  const code = response.getResponseCode();
+  const body = response.getContentText();
 
-  download_to_s3_with_price_update(source_url, target_path, getSecrets);
+  console.log("HTTP status: " + code);
+  console.log(body);
 
-  const url = 'https://idoo-public.s3.eu-central-1.amazonaws.com/' + target_path;
+  if (code !== 200) {
+    throw new Error("Lambda failed: " + body);
+  }
 
+  const result = JSON.parse(body);
+  
   const user = IdM.get_current_user();
   IdM.write_range(user.sheet("Dashboard"),
-  [["Export", url], [IdM.get_timestamp(), logger.flush()]], 13, 1,
+  [["Export", "https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/rosport/rosport.xml"], [IdM.get_timestamp(), result]], 13, 1,
   [
     ["#000000", "#000000"],
     ["#000000", "#000000"]
@@ -318,7 +326,7 @@ function export_rosport()
   [
     ["#00ff00", "#00ff00"],
     ["#00ff00", "#00ff00"]
-  ]);
+  ]);*/
 }
 
 //----------------------------------------------------------------------------------------------
@@ -334,9 +342,34 @@ function download_to_s3_with_price_update(url, filename, secrets_fn) {
     );
   }
 
+  const blob = response.getBlob();
+
+  console.log("Content-Type: " + blob.getContentType());
+  console.log("Downloaded bytes: " + blob.getBytes().length);
 
   // One copy only
   let xml = response.getContentText("UTF-8");
+
+  console.log("XML string length: " + xml.length);
+
+  // --------------------------------------------------
+  // Check that XML was downloaded completely
+  // --------------------------------------------------
+  if (!xml.includes("</offers>")) {
+    throw new Error(
+      "Downloaded XML is truncated: </offers> not found.\n\n" +
+      "Last 1000 chars:\n" +
+      xml.substring(Math.max(0, xml.length - 1000))
+    );
+  }
+
+  if (!xml.trim().endsWith("</yml_catalog>")) {
+    throw new Error(
+      "Downloaded XML is truncated: </yml_catalog> not found.\n\n" +
+      "Last 1000 chars:\n" +
+      xml.substring(Math.max(0, xml.length - 1000))
+    );
+  }
 
 
   xml = xml.replace(
@@ -364,6 +397,232 @@ function download_to_s3_with_price_update(url, filename, secrets_fn) {
   );
 
   return true;
+}
+
+//----------------------------------------------------------------------------------------------
+// AWS Signature Version 4
+//----------------------------------------------------------------------------------------------
+function aws_sign_request(method, requestUrl, payload, service)
+{
+  const {
+    AWS_ACCESS_KEY,
+    AWS_SECRET_KEY,
+    AWS_REGION
+  } = getSecrets();
+
+  const host = requestUrl
+    .replace(/^https?:\/\//, "")
+    .split("/")[0]
+    .toLowerCase();
+
+  const canonicalUri = "/";
+  const canonicalQueryString = "";
+
+  const now = new Date();
+
+  const amzDate = Utilities.formatDate(
+    now,
+    "GMT",
+    "yyyyMMdd'T'HHmmss'Z'"
+  );
+
+  const dateStamp = Utilities.formatDate(
+    now,
+    "GMT",
+    "yyyyMMdd"
+  );
+
+  const payloadHash = aws_sha256_hex(payload);
+
+  const canonicalHeaders =
+    "host:" + host + "\n" +
+    "x-amz-date:" + amzDate + "\n";
+
+  const signedHeaders =
+    "host;x-amz-date";
+
+  const canonicalRequest =
+    method + "\n" +
+    canonicalUri + "\n" +
+    canonicalQueryString + "\n" +
+    canonicalHeaders + "\n" +
+    signedHeaders + "\n" +
+    payloadHash;
+
+  const credentialScope =
+    dateStamp + "/" +
+    AWS_REGION + "/" +
+    service + "/aws4_request";
+
+  const stringToSign =
+    "AWS4-HMAC-SHA256\n" +
+    amzDate + "\n" +
+    credentialScope + "\n" +
+    aws_sha256_hex(canonicalRequest);
+
+  const signingKey = aws_get_signature_key(
+    AWS_SECRET_KEY,
+    dateStamp,
+    AWS_REGION,
+    service
+  );
+
+  const signature = aws_bytes_to_hex(
+    aws_hmac_sha256(
+      signingKey,
+      stringToSign
+    )
+  );
+
+  const authorization =
+    "AWS4-HMAC-SHA256 " +
+    "Credential=" + AWS_ACCESS_KEY + "/" + credentialScope + ", " +
+    "SignedHeaders=" + signedHeaders + ", " +
+    "Signature=" + signature;
+
+  return {
+    "X-Amz-Date": amzDate,
+    "Authorization": authorization
+  };
+}
+
+//----------------------------------------------------------------------------------------------
+// SHA256 → hexadecimal
+//----------------------------------------------------------------------------------------------
+function aws_sha256_hex(value)
+{
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    value,
+    Utilities.Charset.UTF_8
+  );
+
+  return aws_bytes_to_hex(digest);
+}
+
+
+function aws_hmac_sha256(key, value)
+{
+  // Key must be raw bytes.
+  // Initial SigV4 key is a string, so convert it to UTF-8 bytes.
+  const keyBytes = Array.isArray(key)
+    ? key
+    : Utilities.newBlob(key).getBytes();
+
+  // Value must also be raw bytes.
+  const valueBytes = Array.isArray(value)
+    ? value
+    : Utilities.newBlob(value).getBytes();
+
+  return Utilities.computeHmacSha256Signature(
+    valueBytes,
+    keyBytes
+  );
+}
+
+
+function aws_get_signature_key(
+  secretKey,
+  dateStamp,
+  regionName,
+  serviceName
+)
+{
+  const kDate = aws_hmac_sha256(
+    "AWS4" + secretKey,
+    dateStamp
+  );
+
+  const kRegion = aws_hmac_sha256(
+    kDate,
+    regionName
+  );
+
+  const kService = aws_hmac_sha256(
+    kRegion,
+    serviceName
+  );
+
+  const kSigning = aws_hmac_sha256(
+    kService,
+    "aws4_request"
+  );
+
+  return kSigning;
+}
+
+
+//----------------------------------------------------------------------------------------------
+// Bytes → hexadecimal
+//----------------------------------------------------------------------------------------------
+function aws_bytes_to_hex(bytes)
+{
+  return bytes
+    .map(function(byte) {
+      const value = byte < 0 ? byte + 256 : byte;
+      return ("0" + value.toString(16)).slice(-2);
+    })
+    .join("");
+}
+
+function _export_rosport()
+{
+  const lambdaUrl =
+    "https://nxnjojze253hw2vowgnzeobmpu0yuqei.lambda-url.eu-central-1.on.aws/";
+
+  const payload = "";
+
+  const headers = aws_sign_request(
+    "POST",
+    lambdaUrl,
+    payload,
+    "lambda"
+  );
+
+  const response = UrlFetchApp.fetch(lambdaUrl, {
+    method: "post",
+    headers: headers,
+    payload: payload,
+    muteHttpExceptions: true
+  });
+
+  const code = response.getResponseCode();
+  const body = response.getContentText();
+
+  console.log("HTTP status: " + code);
+  console.log(body);
+
+  if (code !== 200) {
+    throw new Error("Lambda failed: " + body);
+  }
+
+  const result = JSON.parse(body);
+
+  const user = IdM.get_current_user();
+
+  IdM.write_range(
+    user.sheet("Dashboard"),
+    [
+      [
+        "Export",
+        "https://idoo-public.s3.eu-central-1.amazonaws.com/xbat/rosport/rosport.xml"
+      ],
+      [
+        IdM.get_timestamp(),
+        result
+      ]
+    ],
+    13,
+    1,
+    [
+      ["#000000", "#000000"],
+      ["#000000", "#000000"]
+    ],
+    [
+      ["#00ff00", "#00ff00"],
+      ["#00ff00", "#00ff00"]
+    ]
+  );
 }
 
 //----------------------------------------------------------------------------------------------
