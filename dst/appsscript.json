@@ -14,12 +14,22 @@
       {
         "userSymbol": "IdM",
         "libraryId": "19HpKgOrmSOMrqwpczdvP5Rd5yVZYEpBCFW5bM5HfNJTKiNHT_4P2iuME",
-        "version": "148"
+        "version": "158"
+      },
+      {
+        "userSymbol": "xflow",
+        "libraryId": "14CvnclAcNeeM3uNGF3wcL_Mj0krIJCtD9BIwGnFDPqGUr-FNN5DCbk-x",
+        "version": "13"
+      },
+      {
+        "userSymbol": "IdMSalesTerminal",
+        "libraryId": "1nHJZDaChh8kuF1elVjxdwhfNwRrzTJMHFDlFxPas57jh6_jcaakFitjA",
+        "version": "117"
       }
     ]
   },
   "webapp": {
-    "executeAs": "USER_ACCESSING",
+    "executeAs": "USER_DEPLOYING",
     "access": "ANYONE"
   },
   "oauthScopes": [

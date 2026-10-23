@@ -9,7 +9,6 @@
 
     <?!= include('styles'); ?>
     <?!= include('styles_topnav'); ?>
-    <?!= include('add_order_js'); ?>
     <?!= include('order_processor_js'); ?>
     <?!= include('user_topnav_js'); ?>
   </head>
@@ -19,11 +18,7 @@
 
 <div class="topnav">
   <a class="#" href="#" onclick="loadPage('order_processor'); return false;">Home</a>
-  <a href="#" onclick="loadPage('add_order'); return false;">New order</a>
-  <a href="#" onclick="loadPage('order_processor'); return false;">Modify order</a>
-  <a href="#" onclick="loadPage('order_processor'); return false;">Articuls</a>
-  <a href="#" onclick="loadPage('order_processor'); return false;">Calculate</a>
-  <a href="#" onclick="loadPage('order_processor'); return false;">Export</a>
+  <a class="#" href="#" onclick="loadPage('sales_terminal'); return false;">Sales Terminal</a>
 </div>
 
 <main id="content">
@@ -38,17 +33,51 @@ const initialPage = "<?= page ?>";
 function loadPage(page) {
 
   google.script.run
-    .withSuccessHandler(function(html) {
+    .withSuccessHandler(function(result) {
 
-      document.getElementById("content").innerHTML = html;
+      // result:
+      // {
+      //   html: "...",
+      //   js: "..."
+      // }
 
-      //init_topnav();
-      
-      if (typeof window[page + "_init"] === "function") {
-        window[page + "_init"]();
+      document.getElementById("content").innerHTML = result.html;
+
+      // Dynamically execute page-specific JS.
+      if (result.js) {
+        const doc = new DOMParser().parseFromString(result.js, "text/html");
+        const scripts = doc.querySelectorAll("script");
+        if (scripts.length === 0) {
+          console.error("No <script> found in result.js:", result.js);
+          return;
+        }
+
+        scripts.forEach(source => {
+          const script = document.createElement("script");
+          script.dataset.page = page;
+          script.textContent = source.textContent;
+          document.head.appendChild(script);
+        });
       }
+
+      // Call page initializer.
+      const init = window[page + "_init"];
+      if (typeof init === "function") {
+        init();
+      }
+      else { 
+        console.warn( "[SPA] Initializer not found:", page + "_init" ); 
+      }
+
     })
-    .render_page(page);
+    .withFailureHandler(function(error) {
+      console.error("Failed to load page:", page, error);
+      document.getElementById("content").innerHTML =
+        "<div class='error'>Failed to load page: " +
+        String(error.message || error) +
+        "</div>";
+    })
+    .get_page(page);
 }
 
 loadPage(initialPage);

@@ -500,10 +500,11 @@ function reset_articul_default(index){
 // Remove position block
 //----------------------------------------------------------------------------------------------
   function removePosition(index) {
-    document.getElementById("pos_" + index).remove();
     positions[index] = null;
     updateTotalOrder();
     update_counts(index);
+
+    document.getElementById("pos_" + index).remove();
   }
 
 //----------------------------------------------------------------------------------------------
@@ -626,7 +627,7 @@ function confirm_submit() {
 
   google.script.run.withSuccessHandler(function(response) {
     
-      // Load items from Google Sheets
+    // Load items from Google Sheets
     google.script.run.withSuccessHandler(function(data) {
 
       close_modal();

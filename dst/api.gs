@@ -1,17 +1,4 @@
-//----------------------------------------------------------------------------------------------
-function include(filename, data) {
-  const template = HtmlService.createTemplateFromFile(filename);
-  IdM.evaluate_template(template, data);
-  return template.evaluate().getContent();
-}
 
-//----------------------------------------------------------------------------------------------
-function render_page(page){
-  return HtmlService
-    .createTemplateFromFile(page)
-    .evaluate()
-    .getContent();
-}
 
 //----------------------------------------------------------------------------------------------
 function get_sku_name() { 
@@ -38,6 +25,24 @@ function add_order_impl(data){
 }
 
 //----------------------------------------------------------------------------------------------
+function add_order_terminal(data){
+  const user = IdM.get_current_user();
+  const ss = user.spreadsheet();
+
+  const table_name = 'dev.orders_v3';
+  let order_sheet = ss.getSheetByName(table_name);
+
+  if (!order_sheet) {
+    throw new Error('[add_order] Sheet not found!');
+  }
+
+  const headers = IdM.get_table_header_map_sheet(orderSheet, 1);
+
+  const { client_info, payment, notes, total_price, positions } = data;
+
+}
+
+//----------------------------------------------------------------------------------------------
 function get_transfer_price(name = 'Transfer') {
   return get_config_transfer_price();
 }
@@ -50,9 +55,99 @@ function get_config_transfer_price(){
 //----------------------------------------------------------------------------------------------
 function idm_deserialize_articuls() {
   console.time('idm_deserialize_articuls');
-  const result = _deserialize_articuls(); //IdM.deserialize_articuls();
+  const result = _deserialize_articuls();
   console.timeEnd('idm_deserialize_articuls');
   return result;
+}
+
+//----------------------------------------------------------------------------------------------
+function to_clientt_object(value) {
+  if (value instanceof Map) {
+    return Object.fromEntries(
+      [...value.entries()].map(([key, val]) => [
+        key,
+        to_clientt_object(val)
+      ])
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(toClientObject);
+  }
+
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [
+        key,
+        to_clientt_object(val)
+      ])
+    );
+  }
+
+  return value;
+}
+
+//----------------------------------------------------------------------------------------------
+function idm_deserialize_articuls_policy() {
+  console.time('idm_deserialize_articuls');
+
+  const data = build_items();
+
+  const articuls = {};
+  data.forEach(a => {
+    const ctx = a.context;
+    articuls[String(ctx.OFFER_ID)] = ctx;
+  });
+
+  const user = IdM.get_current_user();
+
+  let context = {
+    ARTICULS : articuls,
+    CURR_USR_ID : user.id,
+    CURR_USR_GROUP : user.group,
+    USER : {
+      GROUP : user.group,
+      ROLE: user.role,
+    },
+    CURR_CODE : "UAH",
+  };
+
+  const raw_policy = get_config_value(".UserTradePolicy");
+  const res = xflow.process_xml_engine(raw_policy, context);
+
+  console.timeEnd('idm_deserialize_articuls');
+
+  return to_json_compatible(res.context);
+}
+
+//----------------------------------------------------------------------------------------------
+function to_json_compatible(value) {
+  const tag = Object.prototype.toString.call(value);
+  if (tag === "[object Map]") {
+    const result = {};
+
+    for (const [key, val] of value.entries()) {
+      result[String(key)] = to_json_compatible(val);
+    }
+
+    return result;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(to_json_compatible);
+  }
+
+  if (value !== null && typeof value === "object") {
+    const result = {};
+
+    for (const [key, val] of Object.entries(value)) {
+      result[key] = to_json_compatible(val);
+    }
+
+    return result;
+  }
+
+  return value;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -119,6 +214,17 @@ function _deserialize_articuls()
 }
 
 //----------------------------------------------------------------------------------------------
+function build_articul_context(articul){
+  if (!articul || !fields_name){
+      throw new Error("[build_object_context] error: invalid param ");
+  }
+
+  let context = articul.contex();
+
+
+}
+
+//----------------------------------------------------------------------------------------------
 function show_calculation_form_new()
 {
   // Pass JSON to HTML
@@ -126,6 +232,16 @@ function show_calculation_form_new()
 
   const output = html.evaluate().setWidth(1200).setHeight(800);
   SpreadsheetApp.getUi().showModalDialog(output, "Order Calculation");
+}
+
+//----------------------------------------------------------------------------------------------
+function game()
+{
+  // Pass JSON to HTML
+  const html = HtmlService.createTemplateFromFile("game");
+
+  const output = html.evaluate().setWidth(1500).setHeight(1500);
+  SpreadsheetApp.getUi().showModalDialog(output, "Game");
 }
 
 function get_order_tables() { return ["Orders_v2", "Orders New"]; }
@@ -301,11 +417,8 @@ function onOpen() {
     .addItem('Розрахувати', 'show_calculation_form_new')
     .addItem('Менеджер Товарів', 'show_articul_manager_form')
     .addItem('Export all', 'export_all')
-    .addToUi();
-
-  SpreadsheetApp.getUi()
-    .createMenu("Test")
-    .addItem('Select env', 'TEST_SelectRoot')
+    .addItem('Sales Terminal', 'open_sales_terminal_sidebar')
+    .addItem('Game', 'game')
     .addToUi();
 }
 
@@ -323,5 +436,163 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+//----------------------------------------------------------------------------------------------
+function build_items() {
+  console.time('[build_items] full');
 
+  const user = IdM.get_current_user();
+  const sh = user.sheet("Articuls_v2");
+
+  console.time('[build_items] deserialize_data');
+  const data = IdM.deserialize_data(sh);
+  console.timeEnd('[build_items] deserialize_data');
+
+  const headers = IdM.get_table_header_map_sheet(sh);
+
+  const idx_obj_ctxt = headers['Price rule(PL)'];
+  const idx_object_id = headers['offer_id'];
+
+  // 1. Index all records by key (coerced to string)
+  const itemMap = new Map();
+  data.forEach(row => {
+    const rawId = row[idx_object_id];
+    if (rawId !== undefined && rawId !== null && String(rawId).trim() !== "") {
+      itemMap.set(String(rawId).trim(), row);
+    }
+  });
+
+  // Fast regex to extract var-base attribute
+  function extract_base_id(xmlStr) {
+    if (!xmlStr) return null;
+    const match = xmlStr.match(/var-base=["']([^"']+)["']/i);
+    return match ? match[1].trim() : null;
+  }
+
+  // Caches
+  const contextCache = new Map(); // id -> fully compiled context
+  const compiledResults = [];
+  const visiting = new Set();     // Cycle detection guard
+
+  /**
+   * Evaluates an item by ensuring its base item is evaluated first,
+   * regardless of position in the data array.
+   */
+  function evaluate_item(itemId) {
+    // Return early if already compiled
+    if (contextCache.has(itemId)) {
+      return contextCache.get(itemId);
+    }
+
+    const row = itemMap.get(itemId);
+    if (!row) return null;
+
+    // Cycle detection guard (A -> B -> A)
+    if (visiting.has(itemId)) {
+      Logger.log("Warning: Circular dependency detected at offer_id: " + itemId);
+      return null;
+    }
+    visiting.add(itemId);
+
+    const rawXml = row[idx_obj_ctxt];
+    const baseId = extract_base_id(rawXml);
+
+    let parentContext = null;
+
+    // If this item has a base item and it exists in the data, resolve base first
+    if (baseId && baseId !== itemId && itemMap.has(baseId)) {
+      parentContext = evaluate_item(baseId);
+    }
+
+    // Initialize current item's context
+    let context = IdM.fill_item_context_not_null(headers, row);
+    context['CURR_USR_ID'] = user.id;
+    context['CURR_USR_GROUP'] = user.ctx.group;
+    context['CURR_CODE'] = "UAH";
+
+    // Inherit from base item if present
+    if (parentContext) {
+      // Base variables flow down; current row fields take precedence if collisions occur
+      context = Object.assign({}, parentContext, context);
+    }
+
+    let finalXml = rawXml;
+
+    // Execute rule engine on this node
+    if (rawXml && rawXml.trim() !== "") {
+      console.time('[build_items] build xml');
+      const result = xflow.process_xml_engine(rawXml, context);
+      console.timeEnd('[build_items] build xml');
+      context = result.context;
+      finalXml = result.cleanXml;
+    }
+
+    // Cache the resolved context for any future children
+    contextCache.set(itemId, context);
+    visiting.delete(itemId);
+
+    compiledResults.push({
+      context: context,
+      articul: itemMap.get(itemId)
+    });
+
+    return context;
+  }
+
+  // 2. Evaluate all records (order in data does not matter)
+  for (const itemId of itemMap.keys()) {
+    evaluate_item(itemId);
+  }
+
+  console.timeEnd('[build_items] full');
+
+  //Logger.log("Processed " + compiledResults.length + " items across all chains.");
+  return compiledResults;
+}
+
+//----------------------------------------------------------------------------------------------
+function open_sales_terminal() {
+
+  const html = IdMSalesTerminal.open_sales_terminal_html();
+
+  const output = HtmlService
+    .createHtmlOutput(html)
+    .setWidth(1400)
+    .setHeight(1000);
+
+  SpreadsheetApp
+    .getUi()
+    .showModalDialog(output, "Sales Terminal");
+}
+
+//----------------------------------------------------------------------------------------------
+function open_sales_terminal_sidebar() {
+  const html = IdMSalesTerminal.get_sales_terminal_sidebar(get_template_data());
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+//----------------------------------------------------------------------------------------------
+function get_template_data() {
+  const user = IdM.get_current_user();
+  if (!user) { throw new Error('[get_template_data] unknown user'); }
+
+  return {
+    sku_name: get_sku_name(),
+    user_id: user.user_id,
+    user_role: user.role,
+    user_group: user.group,
+    user: { id : user.user_id,
+            role : user.role,
+            group : user.group,
+            accounts : user.accounts,
+    },
+    t_user_id: user.user_id
+  };
+}
+
+//----------------------------------------------------------------------------------------------
+function create_page_template(page, data) {
+  const template = HtmlService.createTemplateFromFile(page);
+  template.template_data = data;
+  return template;
+}
 

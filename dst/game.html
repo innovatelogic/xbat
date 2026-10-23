@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top-Down Shooter: Tactical Sonar Stealth</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0b0f14;
+      color: #c9d1d9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+      user-select: none;
+      overflow-x: hidden;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      color: #58a6ff;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 0.78rem;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: #161b22;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      margin-bottom: 10px;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      max-width: 980px;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+    input[type=range] {
+      accent-color: #58a6ff;
+      cursor: pointer;
+      width: 80px;
+    }
+    .val-display {
+      display: inline-block;
+      min-width: 36px;
+      font-weight: 700;
+      color: #79c0ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+    }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: #238636;
+      color: #fff;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover {
+      background: #2ea043;
+    }
+    button.toggle-active {
+      background: #da3633;
+      border-color: #f85149;
+    }
+    button.toggle-active:hover {
+      background: #b62324;
+    }
+    .stats {
+      display: flex;
+      gap: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      background: #0d1117;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      color: #3fb950;
+      align-items: center;
+    }
+    .stats span {
+      color: #f0883e;
+      font-weight: bold;
+    }
+    .kill-stat {
+      color: #f85149 !important;
+      font-size: 0.95rem;
+    }
+    .canvas-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      background: #05070a;
+      border: 2px solid #30363d;
+      border-radius: 8px;
+      cursor: crosshair;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.75);
+    }
+    .instructions {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: #6e7681;
+      text-align: center;
+    }
+    .kbd {
+      background: #21262d;
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <header>
+    <h1>Top-Down Shooter: Tactical Sonar Stealth</h1>
+    <div class="subtitle">Complete Darkness Mode • Walls & Enemies are Hidden Until Lit by Sonar</div>
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background:#58a6ff;"></span> LMB Blue Echo (Decays -50%/bounce)</div>
+      <div class="legend-item"><span class="dot" style="background:#ff3838;"></span> Space Red Echo (Highlights Walls & Enemies in RED)</div>
+      <div class="legend-item"><span class="dot" style="background:#f59e0b;"></span> Ricochet Hit (Highlight, 0 DMG)</div>
+      <div class="legend-item"><span class="dot" style="background:#ef4444;"></span> Direct Gun Hit / Splash (Lethal DMG)</div>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="control-group">
+      <label for="planeSlider">Planes:</label>
+      <input type="range" id="planeSlider" min="5" max="90" value="35" step="5">
+      <span class="val-display" id="planeVal">35</span>
+    </div>
+
+    <div class="control-group">
+      <label for="enemySlider">Enemies:</label>
+      <input type="range" id="enemySlider" min="1" max="15" value="5" step="1">
+      <span class="val-display" id="enemyVal">5</span>
+    </div>
+
+    <div class="control-group">
+      <label for="enemyHpSlider">Enemy HP:</label>
+      <input type="range" id="enemyHpSlider" min="5" max="50" value="15" step="5">
+      <span class="val-display" id="enemyHpVal">15</span>
+    </div>
+
+    <div class="control-group">
+      <label for="shotCountSlider">LMB Shot:</label>
+      <input type="range" id="shotCountSlider" min="20" max="1500" value="250" step="20">
+      <span class="val-display" id="shotCountVal">250</span>
+    </div>
+
+    <div class="control-group">
+      <label for="lifeSlider">LMB Life:</label>
+      <input type="range" id="lifeSlider" min="0.5" max="6.0" value="2.5" step="0.5">
+      <span class="val-display" id="lifeVal">2.5s</span>
+    </div>
+
+    <div class="control-group">
+      <label for="orbLifeSlider" style="color:#ff7b72;">Space Life2:</label>
+      <input type="range" id="orbLifeSlider" min="1.0" max="8.0" value="3.5" step="0.5">
+      <span class="val-display" id="orbLifeVal" style="color:#ff7b72;">3.5s</span>
+    </div>
+
+    <div class="btn-group">
+      <button id="toggleWallsBtn" class="toggle-active">Show Walls</button>
+      <button id="toggleEnemiesBtn" class="toggle-active">Show Enemies</button>
+      <button id="toggleAudioBtn">Mute Audio</button>
+      <button id="regenBtn">New Maze</button>
+      <button id="respawnBtn">Reset Enemies</button>
+    </div>
+
+    <div class="stats">
+      <div>FPS: <span id="fps">--</span></div>
+      <div>Kills: <span id="killCount" class="kill-stat">0</span></div>
+      <div>Alive: <span id="aliveCount">5</span></div>
+      <div>Sparks: <span id="glowCount">0</span></div>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="viewCanvas" width="750" height="750" oncontextmenu="return false;"></canvas>
+  </div>
+
+  <div class="instructions">
+    <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> Move & Wall-Slide • <span class="kbd">Mouse</span> Aim • <span class="kbd">LMB</span> Sonar Pulse (Direct Hits Kill) • <span class="kbd">Space</span> / <span class="kbd">RMB</span> Heavy Bouncing Orb (Press Again to Detonate Early)
+  </div>
+
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.lastFootstepTime = 0;
+        this.lastWallHitTime = 0;
+        this.lastDirectHitTime = 0;
+        this.lastIndirectHitTime = 0;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playFootstep() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastFootstepTime < 0.24) return;
+        this.lastFootstepTime = now;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(95, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(220, now);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.09);
+      }
+
+      playShoot() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(840, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.15);
+
+        oscGain.gain.setValueAtTime(0.2, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.035);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(1500, now);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.15, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+
+      playWallImpact(intensity = 1.0, isRed = false) {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastWallHitTime < 0.02) return;
+        this.lastWallHitTime = now;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = isRed ? 'triangle' : 'sine';
+        const pitch = isRed ? 720 + Math.random() * 140 : 1250 + Math.random() * 250;
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 0.45, now + 0.045);
+
+        const vol = Math.min(0.18, 0.07 * intensity);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+
+      playIndirectHit() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastIndirectHitTime < 0.035) return;
+        this.lastIndirectHitTime = now;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1800, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.06);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.065);
+      }
+
+      playDirectHit() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (now - this.lastDirectHitTime < 0.03) return;
+        this.lastDirectHitTime = now;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.09);
+
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.095);
+      }
+
+      playOrbLaunch() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(360, now);
+
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.26);
+      }
+
+      playOrbBounce() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.11);
+      }
+
+      playDeathExplosion() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.45);
+
+        oscGain.gain.setValueAtTime(0.45, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.46);
+
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.35);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.12));
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.linearRampToValueAtTime(150, now + 0.35);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.45, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+    }
+
+    const sound = new SoundEngine();
+    const unlockAudio = () => {
+      sound.init();
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+
+    const CANVAS_SIZE = 750;
+    const canvas = document.getElementById('viewCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const planeSlider = document.getElementById('planeSlider');
+    const planeVal = document.getElementById('planeVal');
+    const enemySlider = document.getElementById('enemySlider');
+    const enemyVal = document.getElementById('enemyVal');
+    const enemyHpSlider = document.getElementById('enemyHpSlider');
+    const enemyHpVal = document.getElementById('enemyHpVal');
+    const shotCountSlider = document.getElementById('shotCountSlider');
+    const shotCountVal = document.getElementById('shotCountVal');
+    const lifeSlider = document.getElementById('lifeSlider');
+    const lifeVal = document.getElementById('lifeVal');
+    const orbLifeSlider = document.getElementById('orbLifeSlider');
+    const orbLifeVal = document.getElementById('orbLifeVal');
+    const toggleWallsBtn = document.getElementById('toggleWallsBtn');
+    const toggleEnemiesBtn = document.getElementById('toggleEnemiesBtn');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const regenBtn = document.getElementById('regenBtn');
+    const respawnBtn = document.getElementById('respawnBtn');
+    const fpsElem = document.getElementById('fps');
+    const killCountElem = document.getElementById('killCount');
+    const aliveCountElem = document.getElementById('aliveCount');
+    const glowCountElem = document.getElementById('glowCount');
+
+    let planeCount = parseInt(planeSlider.value, 10);
+    let targetEnemyCount = parseInt(enemySlider.value, 10);
+    let configuredEnemyHp = parseInt(enemyHpSlider.value, 10);
+    let shotCount = parseInt(shotCountSlider.value, 10);
+    let particleLifetime = parseFloat(lifeSlider.value);
+    let orbLifetime2 = parseFloat(orbLifeSlider.value);
+
+    // Initial state: Complete darkness stealth
+    let showWalls = false;
+    let showEnemies = false;
+    let totalKills = 0;
+
+    const player = {
+      x: 375,
+      y: 375,
+      radius: 12,
+      speed: 3.5,
+      angle: 0
+    };
+
+    const keys = { w: false, a: false, s: false, d: false };
+    const mouse = { x: 450, y: 375, isDownLMB: false };
+
+    let heavyOrb = null;
+    let enemies = [];
+
+    function spawnSingleEnemy() {
+      let sx, sy;
+      let attempts = 0;
+      do {
+        sx = 60 + Math.random() * (CANVAS_SIZE - 120);
+        sy = 60 + Math.random() * (CANVAS_SIZE - 120);
+        attempts++;
+      } while (Math.hypot(sx - player.x, sy - player.y) < 140 && attempts < 25);
+
+      return {
+        x: sx,
+        y: sy,
+        radius: 12,
+        speed: 1.3 + Math.random() * 0.8,
+        dirAngle: Math.random() * Math.PI * 2,
+        turnTimer: Math.floor(Math.random() * 60),
+        hp: configuredEnemyHp,
+        maxHp: configuredEnemyHp,
+        hitPulse: 0.0,
+        highlightPulse: 0.0,
+        respawnTimer: 0
+      };
+    }
+
+    function initEnemies() {
+      enemies = [];
+      for (let i = 0; i < targetEnemyCount; i++) {
+        enemies.push(spawnSingleEnemy());
+      }
+      aliveCountElem.textContent = enemies.length;
+    }
+
+    let segments = [];
+    const GRID_RES = 35;
+    const CELL_SIZE = CANVAS_SIZE / GRID_RES;
+    let spatialGrid = [];
+    for (let i = 0; i < GRID_RES * GRID_RES; i++) spatialGrid.push([]);
+
+    const MAX_PARTICLES = 35000;
+    const pX = new Float32Array(MAX_PARTICLES);
+    const pY = new Float32Array(MAX_PARTICLES);
+    const pVx = new Float32Array(MAX_PARTICLES);
+    const pVy = new Float32Array(MAX_PARTICLES);
+    const pLife = new Float32Array(MAX_PARTICLES);
+    const pMaxLife = new Float32Array(MAX_PARTICLES);
+    const pBounces = new Uint8Array(MAX_PARTICLES);
+    const pIsSonarHighlightOnly = new Uint8Array(MAX_PARTICLES);
+    let activeParticles = 0;
+
+    // Contact Glow Sparks
+    // sparkType: 0 = Wall Echo Blue, 1 = Red Echo / Direct Hit / Red Wall Ping, 2 = Indirect Hit Amber
+    const MAX_GLOW_SPARKS = 25000;
+    const GLOW_LIFETIME_FRAMES = 30; // 0.5s at 60 FPS
+    const gX = new Float32Array(MAX_GLOW_SPARKS);
+    const gY = new Float32Array(MAX_GLOW_SPARKS);
+    const gLife = new Float32Array(MAX_GLOW_SPARKS);
+    const gIntensity = new Float32Array(MAX_GLOW_SPARKS);
+    const gType = new Uint8Array(MAX_GLOW_SPARKS);
+    let activeGlowSparks = 0;
+
+    function addGlowSpark(x, y, intensity = 1.0, type = 0) {
+      if (activeGlowSparks >= MAX_GLOW_SPARKS || intensity < 0.02) return;
+      const idx = activeGlowSparks++;
+      gX[idx] = x;
+      gY[idx] = y;
+      gLife[idx] = GLOW_LIFETIME_FRAMES;
+      gIntensity[idx] = intensity;
+      gType[idx] = type;
+    }
+
+    const MAX_EXPLOSIONS = 64;
+    const explosions = [];
+
+    const MAX_DEBRIS = 2000;
+    const debX = new Float32Array(MAX_DEBRIS);
+    const debY = new Float32Array(MAX_DEBRIS);
+    const debVx = new Float32Array(MAX_DEBRIS);
+    const debVy = new Float32Array(MAX_DEBRIS);
+    const debLife = new Float32Array(MAX_DEBRIS);
+    const debMaxLife = new Float32Array(MAX_DEBRIS);
+    let activeDebris = 0;
+
+    function triggerEnemyDeath(ex, ey) {
+      sound.playDeathExplosion();
+      totalKills++;
+      killCountElem.textContent = totalKills;
+
+      if (explosions.length < MAX_EXPLOSIONS) {
+        explosions.push({
+          x: ex,
+          y: ey,
+          radius: 12,
+          maxRadius: 65,
+          alpha: 1.0
+        });
+      }
+
+      for (let k = 0; k < 12; k++) {
+        const offAngle = Math.random() * Math.PI * 2;
+        const offDist = Math.random() * 10;
+        addGlowSpark(ex + Math.cos(offAngle) * offDist, ey + Math.sin(offAngle) * offDist, 1.0, 1);
+      }
+
+      const debrisToSpawn = 35;
+      for (let d = 0; d < debrisToSpawn; d++) {
+        if (activeDebris >= MAX_DEBRIS) break;
+        const idx = activeDebris++;
+        debX[idx] = ex;
+        debY[idx] = ey;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2.5 + Math.random() * 6.0;
+        debVx[idx] = Math.cos(angle) * speed;
+        debVy[idx] = Math.sin(angle) * speed;
+        debLife[idx] = 20 + Math.random() * 25;
+        debMaxLife[idx] = debLife[idx];
+      }
+    }
+
+    function addSegment(x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      if (len < 5) return;
+      segments.push({ id: segments.length, x1, y1, x2, y2, dx, dy, len });
+    }
+
+    function generateMaze() {
+      segments = [];
+
+      addSegment(8, 8, CANVAS_SIZE - 8, 8);
+      addSegment(CANVAS_SIZE - 8, 8, CANVAS_SIZE - 8, CANVAS_SIZE - 8);
+      addSegment(CANVAS_SIZE - 8, CANVAS_SIZE - 8, 8, CANVAS_SIZE - 8);
+      addSegment(8, CANVAS_SIZE - 8, 8, 8);
+
+      for (let i = 0; i < planeCount; i++) {
+        const ox = 70 + Math.random() * (CANVAS_SIZE - 140);
+        const oy = 70 + Math.random() * (CANVAS_SIZE - 140);
+        const angle = Math.random() * Math.PI * 2;
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+
+        const wallLen = 70 + Math.random() * 150;
+        const gapOffset = 25 + Math.random() * (wallLen - 55);
+        const gapSize = 38;
+
+        const p1x = ox - dirX * (wallLen * 0.5);
+        const p1y = oy - dirY * (wallLen * 0.5);
+        const p2x = p1x + dirX * gapOffset;
+        const p2y = p1y + dirY * gapOffset;
+
+        const p3x = p2x + dirX * gapSize;
+        const p3y = p2y + dirY * gapSize;
+        const p4x = ox + dirX * (wallLen * 0.5);
+        const p4y = oy + dirY * (wallLen * 0.5);
+
+        if (p1x > 8 && p1x < CANVAS_SIZE - 8 && p1y > 8 && p1y < CANVAS_SIZE - 8 &&
+            p2x > 8 && p2x < CANVAS_SIZE - 8 && p2y > 8 && p2y < CANVAS_SIZE - 8) {
+          addSegment(p1x, p1y, p2x, p2y);
+        }
+        if (p3x > 8 && p3x < CANVAS_SIZE - 8 && p3y > 8 && p3y < CANVAS_SIZE - 8 &&
+            p4x > 8 && p4x < CANVAS_SIZE - 8 && p4y > 8 && p4y < CANVAS_SIZE - 8) {
+          addSegment(p3x, p3y, p4x, p4y);
+        }
+      }
+
+      buildSpatialGrid();
+      initEnemies();
+      heavyOrb = null;
+    }
+
+    function buildSpatialGrid() {
+      for (let i = 0; i < spatialGrid.length; i++) spatialGrid[i].length = 0;
+
+      for (let s = 0; s < segments.length; s++) {
+        const seg = segments[s];
+        const minX = Math.max(0, Math.floor(Math.min(seg.x1, seg.x2) / CELL_SIZE));
+        const maxX = Math.min(GRID_RES - 1, Math.floor(Math.max(seg.x1, seg.x2) / CELL_SIZE));
+        const minY = Math.max(0, Math.floor(Math.min(seg.y1, seg.y2) / CELL_SIZE));
+        const maxY = Math.min(GRID_RES - 1, Math.floor(Math.max(seg.y1, seg.y2) / CELL_SIZE));
+
+        for (let gy = minY; gy <= maxY; gy++) {
+          for (let gx = minX; gx <= maxX; gx++) {
+            const idx = gy * GRID_RES + gx;
+            if (idx >= 0 && idx < spatialGrid.length) {
+              spatialGrid[idx].push(seg);
+            }
+          }
+        }
+      }
+    }
+
+    function closestPointOnSeg(px, py, seg) {
+      const toX = px - seg.x1;
+      const toY = py - seg.y1;
+      let t = (toX * seg.dx + toY * seg.dy) / (seg.len * seg.len);
+      t = Math.max(0, Math.min(1, t));
+      return { x: seg.x1 + t * seg.dx, y: seg.y1 + t * seg.dy };
+    }
+
+    function resolveCircleCollision(x, y, radius) {
+      let resolvedX = x;
+      let resolvedY = y;
+
+      const minGx = Math.max(0, Math.floor((resolvedX - radius) / CELL_SIZE));
+      const maxGx = Math.min(GRID_RES - 1, Math.floor((resolvedX + radius) / CELL_SIZE));
+      const minGy = Math.max(0, Math.floor((resolvedY - radius) / CELL_SIZE));
+      const maxGy = Math.min(GRID_RES - 1, Math.floor((resolvedY + radius) / CELL_SIZE));
+
+      for (let gy = minGy; gy <= maxGy; gy++) {
+        for (let gx = minGx; gx <= maxGx; gx++) {
+          const bucket = spatialGrid[gy * GRID_RES + gx];
+          if (!bucket) continue;
+          for (let s = 0; s < bucket.length; s++) {
+            const seg = bucket[s];
+            const pt = closestPointOnSeg(resolvedX, resolvedY, seg);
+            const distVecX = resolvedX - pt.x;
+            const distVecY = resolvedY - pt.y;
+            const distSq = distVecX * distVecX + distVecY * distVecY;
+
+            if (distSq < radius * radius && distSq > 0.0001) {
+              const dist = Math.sqrt(distSq);
+              const overlap = radius - dist;
+              resolvedX += (distVecX / dist) * overlap;
+              resolvedY += (distVecY / dist) * overlap;
+            }
+          }
+        }
+      }
+
+      resolvedX = Math.max(radius + 8, Math.min(CANVAS_SIZE - radius - 8, resolvedX));
+      resolvedY = Math.max(radius + 8, Math.min(CANVAS_SIZE - radius - 8, resolvedY));
+      return { x: resolvedX, y: resolvedY };
+    }
+
+    function rayIntersectSegment(p0x, p0y, p1x, p1y, seg) {
+      const rX = p1x - p0x;
+      const rY = p1y - p0y;
+      const sX = seg.dx;
+      const sY = seg.dy;
+
+      const cross = rX * sY - rY * sX;
+      if (Math.abs(cross) < 1e-6) return null;
+
+      const qpX = seg.x1 - p0x;
+      const qpY = seg.y1 - p0y;
+
+      const t = (qpX * sY - qpY * sX) / cross;
+      const u = (qpX * rY - qpY * rX) / cross;
+
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        let nx = -sY / seg.len;
+        let ny = sX / seg.len;
+        if (rX * nx + rY * ny > 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+        return { t, nx, ny };
+      }
+      return null;
+    }
+
+    function rayIntersectCircle(p0x, p0y, p1x, p1y, cx, cy, cr) {
+      const dx = p1x - p0x;
+      const dy = p1y - p0y;
+      const fx = p0x - cx;
+      const fy = p0y - cy;
+
+      const a = dx * dx + dy * dy;
+      const b = 2 * (fx * dx + fy * dy);
+      const c = (fx * fx + fy * fy) - cr * cr;
+
+      if (c <= 0) return 0;
+
+      const discriminant = b * b - 4 * a * c;
+      if (discriminant >= 0) {
+        const sqrtDisc = Math.sqrt(discriminant);
+        const t1 = (-b - sqrtDisc) / (2 * a);
+        if (t1 >= 0 && t1 <= 1) return t1;
+      }
+      return null;
+    }
+
+    function hasLineOfSight(x1, y1, x2, y2) {
+      for (let s = 0; s < segments.length; s++) {
+        if (rayIntersectSegment(x1, y1, x2, y2, segments[s]) !== null) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function shootFanout() {
+      sound.playShoot();
+
+      const spread = Math.PI / 4;
+      const baseAngle = player.angle;
+      const count = shotCount;
+      const maxLifeFrames = particleLifetime * 60;
+
+      const spawnX = player.x + Math.cos(player.angle) * (player.radius + 3);
+      const spawnY = player.y + Math.sin(player.angle) * (player.radius + 3);
+
+      for (let i = 0; i < count; i++) {
+        if (activeParticles >= MAX_PARTICLES) break;
+
+        const idx = activeParticles++;
+        pX[idx] = spawnX;
+        pY[idx] = spawnY;
+
+        const angle = baseAngle + (Math.random() - 0.5) * spread;
+        const speed = 4.0 + Math.random() * 5.0;
+
+        pVx[idx] = Math.cos(angle) * speed;
+        pVy[idx] = Math.sin(angle) * speed;
+        pLife[idx] = maxLifeFrames * (0.8 + Math.random() * 0.4);
+        pMaxLife[idx] = pLife[idx];
+        pBounces[idx] = 0; // Starts with 0 bounces (Direct Hit candidate)
+        pIsSonarHighlightOnly[idx] = 0; // Blue sonar
+      }
+    }
+
+    function handleOrbAction() {
+      if (heavyOrb && heavyOrb.active) {
+        // Pressing Space/RMB a second time triggers early manual detonation
+        detonateOrb(heavyOrb.x, heavyOrb.y);
+        heavyOrb = null;
+      } else {
+        // Launch a new heavy red orb
+        sound.playOrbLaunch();
+        const spawnX = player.x + Math.cos(player.angle) * (player.radius + 6);
+        const spawnY = player.y + Math.sin(player.angle) * (player.radius + 6);
+        const speed = 3.2;
+
+        heavyOrb = {
+          x: spawnX,
+          y: spawnY,
+          vx: Math.cos(player.angle) * speed,
+          vy: Math.sin(player.angle) * speed,
+          radius: 6,
+          life: orbLifetime2 * 60,
+          maxLife: orbLifetime2 * 60,
+          active: true
+        };
+      }
+    }
+
+    function detonateOrb(ox, oy) {
+      sound.playDeathExplosion();
+
+      if (explosions.length < MAX_EXPLOSIONS) {
+        explosions.push({
+          x: ox,
+          y: oy,
+          radius: 12,
+          maxRadius: 140,
+          alpha: 1.0
+        });
+      }
+
+      const splashRadius = 135;
+      const splashDamage = configuredEnemyHp;
+
+      // 1. Splash damage to enemies within line of sight
+      for (let e = 0; e < enemies.length; e++) {
+        const en = enemies[e];
+        if (en.hp <= 0) continue;
+        const dist = Math.hypot(en.x - ox, en.y - oy);
+
+        if (dist <= splashRadius + en.radius) {
+          if (hasLineOfSight(ox, oy, en.x, en.y)) {
+            en.hp -= splashDamage;
+            en.hitPulse = 1.0;
+            addGlowSpark(en.x, en.y, 1.0, 1);
+
+            if (en.hp <= 0) {
+              en.hp = 0;
+              en.respawnTimer = 180;
+              triggerEnemyDeath(en.x, en.y);
+            }
+          }
+        }
+      }
+
+      // 2. Emit 360-degree Non-Lethal Red Sonar Echo Ring (Highlights walls and enemies in RED)
+      const echoCount = 420;
+      const echoLifeFrames = particleLifetime * 60 * 1.1;
+
+      for (let i = 0; i < echoCount; i++) {
+        if (activeParticles >= MAX_PARTICLES) break;
+
+        const idx = activeParticles++;
+        pX[idx] = ox;
+        pY[idx] = oy;
+
+        const angle = (i / echoCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.04;
+        const speed = 3.6 + Math.random() * 2.8;
+
+        pVx[idx] = Math.cos(angle) * speed;
+        pVy[idx] = Math.sin(angle) * speed;
+        pLife[idx] = echoLifeFrames * (0.8 + Math.random() * 0.4);
+        pMaxLife[idx] = pLife[idx];
+        pBounces[idx] = 0;
+        pIsSonarHighlightOnly[idx] = 1; // Pure red highlight echo
+      }
+    }
+
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
+    }, { capture: true });
+
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    }, { capture: true });
+
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if (keys.hasOwnProperty(key)) {
+        keys[key] = true;
+      }
+      // Space key triggers heavy orb launch or manual detonation
+      if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+        e.preventDefault();
+        if (!e.repeat) {
+          handleOrbAction();
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase();
+      if (keys.hasOwnProperty(key)) keys[key] = false;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        mouse.isDownLMB = true;
+        shootFanout();
+      } else if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOrbAction();
+      }
+    });
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) mouse.isDownLMB = false;
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    planeSlider.addEventListener('input', (e) => {
+      planeCount = parseInt(e.target.value, 10);
+      planeVal.textContent = planeCount;
+      generateMaze();
+    });
+
+    enemySlider.addEventListener('input', (e) => {
+      targetEnemyCount = parseInt(e.target.value, 10);
+      enemyVal.textContent = targetEnemyCount;
+      initEnemies();
+    });
+
+    enemyHpSlider.addEventListener('input', (e) => {
+      configuredEnemyHp = parseInt(e.target.value, 10);
+      enemyHpVal.textContent = configuredEnemyHp;
+      for (let i = 0; i < enemies.length; i++) {
+        enemies[i].hp = configuredEnemyHp;
+        enemies[i].maxHp = configuredEnemyHp;
+      }
+    });
+
+    shotCountSlider.addEventListener('input', (e) => {
+      shotCount = parseInt(e.target.value, 10);
+      shotCountVal.textContent = shotCount;
+    });
+
+    lifeSlider.addEventListener('input', (e) => {
+      particleLifetime = parseFloat(e.target.value);
+      lifeVal.textContent = `${particleLifetime.toFixed(1)}s`;
+    });
+
+    orbLifeSlider.addEventListener('input', (e) => {
+      orbLifetime2 = parseFloat(e.target.value);
+      orbLifeVal.textContent = `${orbLifetime2.toFixed(1)}s`;
+    });
+
+    toggleWallsBtn.addEventListener('click', () => {
+      showWalls = !showWalls;
+      toggleWallsBtn.textContent = showWalls ? "Hide Walls" : "Show Walls";
+      toggleWallsBtn.classList.toggle('toggle-active', !showWalls);
+    });
+
+    toggleEnemiesBtn.addEventListener('click', () => {
+      showEnemies = !showEnemies;
+      toggleEnemiesBtn.textContent = showEnemies ? "Hide Enemies" : "Show Enemies";
+      toggleEnemiesBtn.classList.toggle('toggle-active', !showEnemies);
+    });
+
+    toggleAudioBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      toggleAudioBtn.textContent = sound.enabled ? "Mute Audio" : "Unmute Audio";
+      toggleAudioBtn.classList.toggle('toggle-active', !sound.enabled);
+    });
+
+    regenBtn.addEventListener('click', () => {
+      activeGlowSparks = 0;
+      generateMaze();
+    });
+
+    respawnBtn.addEventListener('click', () => {
+      initEnemies();
+    });
+
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    function loop(now) {
+      if (!now) now = performance.now();
+
+      // 1. Player Update & Footsteps
+      let moveX = 0;
+      let moveY = 0;
+      if (keys.w) moveY -= 1;
+      if (keys.s) moveY += 1;
+      if (keys.a) moveX -= 1;
+      if (keys.d) moveX += 1;
+
+      const isMoving = (moveX !== 0 || moveY !== 0);
+      if (isMoving) {
+        sound.playFootstep();
+        moveX *= 0.7071;
+        moveY *= 0.7071;
+      }
+
+      const nextX = player.x + moveX * player.speed;
+      const nextY = player.y + moveY * player.speed;
+      const resolved = resolveCircleCollision(nextX, nextY, player.radius);
+      player.x = resolved.x;
+      player.y = resolved.y;
+
+      const diffX = mouse.x - player.x;
+      const diffY = mouse.y - player.y;
+      if (Math.abs(diffX) > 0.001 || Math.abs(diffY) > 0.001) {
+        player.angle = Math.atan2(diffY, diffX);
+      }
+
+      if (mouse.isDownLMB && frameCount % 6 === 0) {
+        shootFanout();
+      }
+
+      // 2. Heavy Orb Physics & Bounce Logic (Wall Bounces Spark RED)
+      if (heavyOrb && heavyOrb.active) {
+        heavyOrb.life -= 1.0;
+        if (heavyOrb.life <= 0) {
+          detonateOrb(heavyOrb.x, heavyOrb.y);
+          heavyOrb = null;
+        } else {
+          let ox0 = heavyOrb.x;
+          let oy0 = heavyOrb.y;
+          let ovx = heavyOrb.vx;
+          let ovy = heavyOrb.vy;
+          let ox1 = ox0 + ovx;
+          let oy1 = oy0 + ovy;
+
+          let closestWallT = 1.0;
+          let hitNormX = 0, hitNormY = 0;
+          let didHit = false;
+
+          for (let s = 0; s < segments.length; s++) {
+            const hit = rayIntersectSegment(ox0, oy0, ox1, oy1, segments[s]);
+            if (hit && hit.t < closestWallT) {
+              closestWallT = hit.t;
+              hitNormX = hit.nx;
+              hitNormY = hit.ny;
+              didHit = true;
+            }
+          }
+
+          if (didHit) {
+            heavyOrb.x = ox0 + ovx * closestWallT + hitNormX * 0.4;
+            heavyOrb.y = oy0 + ovy * closestWallT + hitNormY * 0.4;
+
+            const dot = ovx * hitNormX + ovy * hitNormY;
+            heavyOrb.vx = (ovx - 2 * dot * hitNormX) * 0.94;
+            heavyOrb.vy = (ovy - 2 * dot * hitNormY) * 0.94;
+
+            sound.playOrbBounce();
+            // Heavy orb bounce highlights walls with RED sparks
+            addGlowSpark(heavyOrb.x, heavyOrb.y, 1.0, 1);
+          } else {
+            heavyOrb.x = ox1;
+            heavyOrb.y = oy1;
+          }
+
+          if (heavyOrb.x < 8) { heavyOrb.x = 8; heavyOrb.vx = Math.abs(heavyOrb.vx); }
+          if (heavyOrb.x > CANVAS_SIZE - 8) { heavyOrb.x = CANVAS_SIZE - 8; heavyOrb.vx = -Math.abs(heavyOrb.vx); }
+          if (heavyOrb.y < 8) { heavyOrb.y = 8; heavyOrb.vy = Math.abs(heavyOrb.vy); }
+          if (heavyOrb.y > CANVAS_SIZE - 8) { heavyOrb.y = CANVAS_SIZE - 8; heavyOrb.vy = -Math.abs(heavyOrb.vy); }
+        }
+      }
+
+      // 3. Enemy AI & Auto-Respawn Loop
+      let livingCount = 0;
+      for (let e = enemies.length - 1; e >= 0; e--) {
+        const en = enemies[e];
+
+        if (en.hp <= 0) {
+          en.respawnTimer--;
+          if (en.respawnTimer <= 0) {
+            enemies[e] = spawnSingleEnemy();
+          }
+          continue;
+        }
+
+        livingCount++;
+        en.turnTimer--;
+        if (en.turnTimer <= 0) {
+          en.dirAngle += (Math.random() - 0.5) * 1.8;
+          en.turnTimer = 40 + Math.floor(Math.random() * 80);
+        }
+
+        const exNext = en.x + Math.cos(en.dirAngle) * en.speed;
+        const eyNext = en.y + Math.sin(en.dirAngle) * en.speed;
+        const enResolved = resolveCircleCollision(exNext, eyNext, en.radius);
+
+        if (Math.hypot(enResolved.x - exNext, enResolved.y - eyNext) > 0.1) {
+          en.dirAngle += Math.PI * 0.6 + Math.random() * 0.4;
+        }
+
+        en.x = enResolved.x;
+        en.y = enResolved.y;
+
+        if (en.hitPulse > 0.01) en.hitPulse *= 0.91;
+        else en.hitPulse = 0.0;
+
+        if (en.highlightPulse > 0.01) en.highlightPulse *= 0.93;
+        else en.highlightPulse = 0.0;
+      }
+      aliveCountElem.textContent = livingCount;
+
+      // 4. Glow Sparks Decay
+      for (let i = activeGlowSparks - 1; i >= 0; i--) {
+        gLife[i] -= 1.0;
+        if (gLife[i] <= 0) {
+          const last = --activeGlowSparks;
+          gX[i] = gX[last];
+          gY[i] = gY[last];
+          gLife[i] = gLife[last];
+          gIntensity[i] = gIntensity[last];
+          gType[i] = gType[last];
+        }
+      }
+
+      // 5. Explosion Shockwaves & Debris Simulation
+      for (let i = explosions.length - 1; i >= 0; i--) {
+        const ex = explosions[i];
+        ex.radius += (ex.maxRadius - ex.radius) * 0.16 + 1.2;
+        ex.alpha -= 0.035;
+        if (ex.alpha <= 0 || ex.radius >= ex.maxRadius) {
+          explosions.splice(i, 1);
+        }
+      }
+
+      for (let i = activeDebris - 1; i >= 0; i--) {
+        debLife[i] -= 1.0;
+        if (debLife[i] <= 0) {
+          const last = --activeDebris;
+          debX[i] = debX[last];
+          debY[i] = debY[last];
+          debVx[i] = debVx[last];
+          debVy[i] = debVy[last];
+          debLife[i] = debLife[last];
+          debMaxLife[i] = debMaxLife[last];
+          continue;
+        }
+        debX[i] += debVx[i];
+        debY[i] += debVy[i];
+        debVx[i] *= 0.96;
+        debVy[i] *= 0.96;
+      }
+
+      for (let i = activeParticles - 1; i >= 0; i--) {
+        pLife[i] -= 1.0;
+        if (pLife[i] <= 0) {
+          const last = --activeParticles;
+          pX[i] = pX[last]; pY[i] = pY[last];
+          pVx[i] = pVx[last]; pVy[i] = pVy[last];
+          pLife[i] = pLife[last]; pMaxLife[i] = pMaxLife[last];
+          pBounces[i] = pBounces[last];
+          pIsSonarHighlightOnly[i] = pIsSonarHighlightOnly[last];
+          continue;
+        }
+
+        let p0x = pX[i];
+        let p0y = pY[i];
+        let vx = pVx[i];
+        let vy = pVy[i];
+        let p1x = p0x + vx;
+        let p1y = p0y + vy;
+
+        // Continuous Enemy Hit Test
+        let enemyHitT = 2.0;
+        let hitEnemyIdx = -1;
+
+        for (let e = 0; e < enemies.length; e++) {
+          const en = enemies[e];
+          if (en.hp <= 0) continue;
+
+          const tHit = rayIntersectCircle(p0x, p0y, p1x, p1y, en.x, en.y, en.radius);
+          if (tHit !== null && tHit < enemyHitT) {
+            enemyHitT = tHit;
+            hitEnemyIdx = e;
+          }
+        }
+
+        // Continuous Wall Collision Test
+        const minGx = Math.max(0, Math.min(GRID_RES - 1, Math.floor(Math.min(p0x, p1x) / CELL_SIZE)));
+        const maxGx = Math.min(GRID_RES - 1, Math.floor(Math.max(p0x, p1x) / CELL_SIZE));
+        const minGy = Math.max(0, Math.min(GRID_RES - 1, Math.floor(Math.min(p0y, p1y) / CELL_SIZE)));
+        const maxGy = Math.min(GRID_RES - 1, Math.floor(Math.max(p0y, p1y) / CELL_SIZE));
+
+        let closestWallT = 1.0;
+        let hitNormalX = 0;
+        let hitNormalY = 0;
+        let didCollideWall = false;
+
+        for (let gy = minGy; gy <= maxGy; gy++) {
+          for (let gx = minGx; gx <= maxGx; gx++) {
+            const bucket = spatialGrid[gy * GRID_RES + gx];
+            if (!bucket) continue;
+            for (let s = 0; s < bucket.length; s++) {
+              const hit = rayIntersectSegment(p0x, p0y, p1x, p1y, bucket[s]);
+              if (hit && hit.t < closestWallT) {
+                closestWallT = hit.t;
+                hitNormalX = hit.nx;
+                hitNormalY = hit.ny;
+                didCollideWall = true;
+              }
+            }
+          }
+        }
+
+        // ENEMY HIT RESOLUTION
+        if (hitEnemyIdx !== -1 && enemyHitT <= (didCollideWall ? closestWallT : 1.0)) {
+          const target = enemies[hitEnemyIdx];
+          const contactX = p0x + vx * enemyHitT;
+          const contactY = p0y + vy * enemyHitT;
+
+          const isDirect = (pBounces[i] === 0);
+          const isHighlightOnly = (pIsSonarHighlightOnly[i] === 1);
+
+          // Direct Hit from LMB muzzle: Deal lethal damage
+          if (isDirect && !isHighlightOnly) {
+            addGlowSpark(contactX, contactY, 1.0, 1); // 1 = Red
+            target.hitPulse = 1.0;
+            target.hp -= 1;
+
+            if (target.hp <= 0) {
+              target.hp = 0;
+              target.respawnTimer = 180;
+              triggerEnemyDeath(target.x, target.y);
+            } else {
+              sound.playDirectHit();
+            }
+          } else {
+            // Indirect Hit or 360 Splash Echo: Non-lethal highlight
+            const sparkType = isHighlightOnly ? 1 : 2; // Red for 360 echo, Amber for bounced LMB
+            addGlowSpark(contactX, contactY, 0.9, sparkType);
+            target.highlightPulse = 1.0;
+            sound.playIndirectHit();
+          }
+
+          // In both cases, the particle is absorbed upon impact
+          const last = --activeParticles;
+          pX[i] = pX[last]; pY[i] = pY[last];
+          pVx[i] = pVx[last]; pVy[i] = pVy[last];
+          pLife[i] = pLife[last]; pMaxLife[i] = pMaxLife[last];
+          pBounces[i] = pBounces[last];
+          pIsSonarHighlightOnly[i] = pIsSonarHighlightOnly[last];
+          continue;
+        }
+
+        // WALL RICOCHET RESOLUTION
+        if (didCollideWall) {
+          const contactX = p0x + vx * closestWallT;
+          const contactY = p0y + vy * closestWallT;
+
+          const currentIntensity = Math.pow(0.5, pBounces[i]);
+          const isRedParticle = (pIsSonarHighlightOnly[i] === 1);
+
+          // KEY RESOLUTION: Red particles highlight walls with RED sparks (type 1)
+          // Blue LMB particles highlight walls with BLUE sparks (type 0)
+          if (isRedParticle) {
+            addGlowSpark(contactX, contactY, currentIntensity * 1.1, 1); // 1 = Red
+            sound.playWallImpact(currentIntensity, true);
+          } else {
+            addGlowSpark(contactX, contactY, currentIntensity, 0); // 0 = Blue
+            sound.playWallImpact(currentIntensity, false);
+          }
+
+          pBounces[i]++;
+          p0x = contactX;
+          p0y = contactY;
+
+          const dot = vx * hitNormalX + vy * hitNormalY;
+          vx = (vx - 2 * dot * hitNormalX) * 0.96;
+          vy = (vy - 2 * dot * hitNormalY) * 0.96;
+
+          p0x += hitNormalX * 0.25;
+          p0y += hitNormalY * 0.25;
+        } else {
+          p0x = p1x;
+          p0y = p1y;
+        }
+
+        if (p0x < 8) { p0x = 8; vx = Math.abs(vx); }
+        if (p0x > CANVAS_SIZE - 8) { p0x = CANVAS_SIZE - 8; vx = -Math.abs(vx); }
+        if (p0y < 8) { p0y = 8; vy = Math.abs(vy); }
+        if (p0y > CANVAS_SIZE - 8) { p0y = CANVAS_SIZE - 8; vy = -Math.abs(vy); }
+
+        pX[i] = p0x;
+        pY[i] = p0y;
+        pVx[i] = vx;
+        pVy[i] = vy;
+      }
+
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      // Render Maze Walls (Hidden by default)
+      if (showWalls) {
+        ctx.strokeStyle = '#21262d';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let i = 0; i < segments.length; i++) {
+          const seg = segments[i];
+          ctx.moveTo(seg.x1, seg.y1);
+          ctx.lineTo(seg.x2, seg.y2);
+        }
+        ctx.stroke();
+      }
+
+      // Render Enemies (Revealed only via sonar pulses or toggle)
+      for (let e = 0; e < enemies.length; e++) {
+        const en = enemies[e];
+        if (en.hp <= 0) continue;
+
+        const isVisible = showEnemies || en.hitPulse > 0.05 || en.highlightPulse > 0.05;
+        if (isVisible) {
+          const directAlpha = en.hitPulse;
+          const indirectAlpha = en.highlightPulse;
+          const baseAlpha = showEnemies ? 1.0 : Math.max(directAlpha, indirectAlpha);
+
+          ctx.save();
+          ctx.translate(en.x, en.y);
+
+          ctx.beginPath();
+          ctx.arc(0, 0, en.radius, 0, Math.PI * 2);
+          if (directAlpha > 0.2) {
+            ctx.fillStyle = `rgba(239, 68, 68, ${baseAlpha.toFixed(2)})`;
+          } else if (indirectAlpha > 0.2) {
+            ctx.fillStyle = `rgba(245, 158, 11, ${baseAlpha.toFixed(2)})`;
+          } else {
+            const healthRatio = en.hp / en.maxHp;
+            ctx.fillStyle = `rgba(${Math.floor(180 + (1 - healthRatio) * 60)}, 28, 28, ${baseAlpha.toFixed(2)})`;
+          }
+          ctx.fill();
+
+          ctx.lineWidth = 2;
+          if (indirectAlpha > 0.1) {
+            ctx.strokeStyle = `rgba(251, 191, 36, ${Math.max(baseAlpha, indirectAlpha).toFixed(2)})`;
+          } else {
+            ctx.strokeStyle = `rgba(248, 113, 113, ${baseAlpha.toFixed(2)})`;
+          }
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(en.dirAngle) * (en.radius + 4), Math.sin(en.dirAngle) * (en.radius + 4));
+          ctx.strokeStyle = `rgba(254, 202, 202, ${baseAlpha.toFixed(2)})`;
+          ctx.stroke();
+
+          // Overhead Health Bar
+          const healthRatio = en.hp / en.maxHp;
+          const barW = 20;
+          const barH = 3;
+          const barY = -en.radius - 7;
+          ctx.fillStyle = `rgba(0, 0, 0, ${(baseAlpha * 0.7).toFixed(2)})`;
+          ctx.fillRect(-barW / 2, barY, barW, barH);
+          ctx.fillStyle = healthRatio > 0.4 
+            ? `rgba(239, 68, 68, ${baseAlpha.toFixed(2)})` 
+            : `rgba(251, 146, 60, ${baseAlpha.toFixed(2)})`;
+          ctx.fillRect(-barW / 2, barY, barW * healthRatio, barH);
+
+          ctx.restore();
+        }
+      }
+
+      // Render Additive Glow & Shockwaves
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      for (let i = 0; i < activeGlowSparks; i++) {
+        const progress = gLife[i] / GLOW_LIFETIME_FRAMES;
+        const alpha = Math.min(1.0, progress * 1.5) * gIntensity[i];
+        const radius = (2.0 + (1.0 - progress) * 4.5) * (0.5 + 0.5 * gIntensity[i]);
+        const sparkType = gType[i];
+
+        if (sparkType === 1) {
+          // RED SPARK: Red particle wall impact, heavy orb bounce, direct enemy damage, or splash echo
+          ctx.fillStyle = `rgba(239, 68, 68, ${(alpha * 0.62).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 2.5), 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(254, 226, 226, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 0.7), 0, Math.PI * 2);
+          ctx.fill();
+        } else if (sparkType === 2) {
+          // AMBER SPARK: Indirect bounced LMB echo on enemy
+          ctx.fillStyle = `rgba(245, 158, 11, ${(alpha * 0.65).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 2.4), 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(254, 243, 199, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 0.7), 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // BLUE SPARK: Standard LMB wall bounce echo
+          ctx.fillStyle = `rgba(56, 189, 248, ${(alpha * 0.4).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 2.0), 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(240, 249, 255, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(gX[i], gY[i], Math.max(0.1, radius * 0.6), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Death & Splash Shockwave Rings
+      for (let i = 0; i < explosions.length; i++) {
+        const ex = explosions[i];
+        ctx.strokeStyle = `rgba(239, 68, 68, ${ex.alpha.toFixed(2)})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(254, 202, 202, ${(ex.alpha * 0.7).toFixed(2)})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.radius * 0.85, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Explosion Debris
+      for (let i = 0; i < activeDebris; i++) {
+        const dProgress = debLife[i] / debMaxLife[i];
+        ctx.fillStyle = `rgba(248, 113, 113, ${(dProgress * 0.85).toFixed(2)})`;
+        ctx.fillRect(debX[i] - 1.5, debY[i] - 1.5, 3.0, 3.0);
+      }
+
+      ctx.restore();
+
+      // Render Sonar Particles
+      for (let i = 0; i < activeParticles; i++) {
+        const alpha = Math.max(0.12, pLife[i] / pMaxLife[i]);
+
+        if (pIsSonarHighlightOnly[i] === 1) {
+          // 360-degree echo wave particles (Luminous Red)
+          ctx.fillStyle = `rgba(255, 75, 75, ${alpha.toFixed(2)})`;
+          ctx.fillRect(pX[i] - 1, pY[i] - 1, 2.4, 2.4);
+        } else {
+          // Standard gun particles
+          if (pBounces[i] === 0) {
+            ctx.fillStyle = `rgba(96, 165, 250, ${alpha.toFixed(2)})`;
+          } else if (pBounces[i] === 1) {
+            ctx.fillStyle = `rgba(45, 212, 191, ${(alpha * 0.85).toFixed(2)})`;
+          } else {
+            ctx.fillStyle = `rgba(129, 140, 248, ${(alpha * 0.7).toFixed(2)})`;
+          }
+          ctx.fillRect(pX[i] - 1, pY[i] - 1, 2.2, 2.2);
+        }
+      }
+
+      // Render Heavy Orb (Space / RMB)
+      if (heavyOrb && heavyOrb.active) {
+        const pulse = 1.0 + Math.sin(frameCount * 0.3) * 0.22;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(heavyOrb.x, heavyOrb.y, heavyOrb.radius * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff2a2a';
+        ctx.shadowColor = '#ff4d4d';
+        ctx.shadowBlur = 16;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(heavyOrb.x, heavyOrb.y, heavyOrb.radius * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Render Player Character
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#238636';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#3fb950';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(player.radius - 2, -3);
+      ctx.lineTo(player.radius + 8, 0);
+      ctx.lineTo(player.radius - 2, 3);
+      ctx.fillStyle = '#7ee787';
+      ctx.fill();
+      ctx.restore();
+
+      // FPS Metronome
+      frameCount++;
+      if (frameCount % 20 === 0) {
+        const delta = now - lastTime;
+        fpsElem.textContent = ((20 / delta) * 1000).toFixed(1);
+        glowCountElem.textContent = activeGlowSparks;
+        lastTime = now;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    generateMaze();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
