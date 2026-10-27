@@ -166,11 +166,16 @@ function export_rozetka_articuls_old(arg)
   const offers = XmlService.createElement('offers');
   
   {
-    const root_category = XmlService.createElement('category')
+    const category_654239 = XmlService.createElement('category')
                             .setAttribute('id', 654239)
                             .setText("Акумулятори та батарейки");
 
-    categories.addContent(root_category);
+    const category_1554082 = XmlService.createElement('category')
+                        .setAttribute('id', 1554082)
+                        .setText("Акумулятори та аксесуари для ДБЖ");
+
+    categories.addContent(category_654239);
+    categories.addContent(category_1554082);
   }
   shop.addContent(categories);
 
@@ -605,11 +610,16 @@ function export_rozetka_articuls_new(arg)
   const offers = XmlService.createElement('offers');
   
   {
-    const root_category = XmlService.createElement('category')
+    const category_654239 = XmlService.createElement('category')
                             .setAttribute('id', 654239)
                             .setText("Акумулятори та батарейки");
 
-    categories.addContent(root_category);
+    const category_1554082 = XmlService.createElement('category')
+                        .setAttribute('id', 1554082)
+                        .setText("Акумулятори та аксесуари для ДБЖ");
+
+    categories.addContent(category_654239);
+    categories.addContent(category_1554082);
   }
   shop.addContent(categories);
 
