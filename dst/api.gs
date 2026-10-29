@@ -110,9 +110,18 @@ function add_order_terminal(data){
     throw new Error('[add_order] Sheet not found!');
   }
 
-  const headers = IdM.get_table_header_map_sheet(order_sheet, 1);
+  // accept both plain and underscore-prefixed payload keys
+  const pick = (obj, name) => obj[name] !== undefined ? obj[name] : obj['_' + name];
 
-  const { _client_info, _payment_id, _notes, _tot_order_price, _positions } = data;
+  const client_info = pick(data, 'client_info');
+  const payment = pick(data, 'payment') ?? pick(data, 'payment_id');
+  const notes = pick(data, 'notes');
+  const total_price = pick(data, 'total_price') ?? pick(data, 'tot_order_price');
+  const positions = pick(data, 'positions');
+
+  if (!Array.isArray(positions) || positions.length === 0) {
+    throw new Error('[add_order_terminal] no positions in order: keys=' + Object.keys(data || {}).join(','));
+  }
 
   const timestamp = new Date();
   const order_id = 'ORD-' + timestamp.getTime();
@@ -121,48 +130,51 @@ function add_order_terminal(data){
   const filter = order_sheet.getFilter();
   if (filter) { filter.remove(); }
 
-  const last = order_sheet.getLastRow();
-  const position_map = new Map();
+  const item_cache = new Map();
 
   // Insert one row per item position
-  _positions.forEach((pos, index) => {
+  positions.forEach((pos) => {
+    const offer_id = pick(pos, 'offer_id');
+    const item_name = pick(pos, 'item_name');
+    const count = Number(pick(pos, 'count'));
+    const pos_price = Number(pick(pos, 'pos_price') ?? pick(pos, 'tot_pos_price'));
 
-    const {_offer_id, _item_name, _count, _tot_pos_price} = pos;
-
-    if (position_map.get(order_id) == null){
-      position_map[_offer_id] = build_item(_offer_id);
+    if (!item_cache.has(offer_id)) {
+      item_cache.set(offer_id, build_item(offer_id));
     }
 
-    const item_ctx = position_map[_offer_id];
-    const dealer_price = get_item_bare_price(position_map[_offer_id], _count);
+    const item_ctx = item_cache.get(offer_id);
+    if (!item_ctx) {
+      throw new Error(`[add_order_terminal] item not found: offer_id=${offer_id}`);
+    }
 
-    const base_prc = item_ctx.bare_price * _count;
-    const total_profit = _tot_pos_price - base;
-    const dealer_profit = (dealer_price - item_ctx.bare_price) * count;
+    const bare_price = Number(item_ctx.BARE_PRICE);
+    const dealer_price = Number(get_item_bare_price(item_ctx, count));
+
+    const base_prc = bare_price * count;
+    const total_profit = pos_price - base_prc;
+    const dealer_profit = (dealer_price - bare_price) * count;
     const owner_profit = total_profit - dealer_profit;
 
-    const row_values = [
+    order_sheet.appendRow([
       timestamp,                    // timestamp
       order_id,                     // id
-      _offer_id,                    // articul_id
-      _item_name,                   // articul_name
-      _count,                       // count
-      item_ctx.bare_price,          // supply_price
-      _tot_order_price,             // total_order_price
-      _tot_pos_price,               // total_pos_price
+      offer_id,                     // articul_id
+      item_name,                    // articul_name
+      count,                        // count
+      bare_price,                   // supply_price
+      total_price,                  // total_order_price
+      pos_price,                    // total_pos_price
       base_prc,                     // pos_base
       owner_profit,                 // owner_profit
       dealer_profit,                // dealer_profit
-      _client_info,                 // client_info
-      notes,                        // _notes
-      _payment_id,                   // payment
+      client_info,                  // client_info
+      notes,                        // notes
+      payment,                      // payment
       'Створено',                   // status
       user.id
-    ];
-
-    order_sheet.appendRow(row_values);
+    ]);
   });
-
 }
 
 //----------------------------------------------------------------------------------------------
