@@ -25,6 +25,80 @@ function add_order_impl(data){
 }
 
 //----------------------------------------------------------------------------------------------
+function get_item_bare_price(item, count) {
+
+  if (!item) { throw new Error(`[get_item_bare_price] invalid input param}`); }
+
+  // return dealer price by default
+  const dealer_price_rule = item.DEALER_PRICE_RULE;
+  if (dealer_price_rule && dealer_price_rule.length > 0) {
+     for (r of dealer_price_rule) {
+      const min = r.min ?? 0;
+      const max = r.max ?? Infinity;
+      if (count >= min && count < max){
+        if (r.price == null || !Number.isFinite(Number(r.price)) || Number(r.price) < 0) {
+          throw new Error(`[get_item_bare_price] invalid dealer price rule for offer_id=${offer_id}`);
+        }
+        return r.price;
+      }
+    }
+    throw new Error('[get_item_bare_price] failed dealer price rule calculation');
+  }
+
+  const dealer_price = item.DEALER_PRICE;
+  if (dealer_price) {
+    if (dealer_price == null || !Number.isFinite(Number(dealer_price)) || Number(dealer_price) < 0) {
+      throw new Error(`[get_item_bare_price] invalid default dealer price rule for offer_id=${offer_id}`);
+    }
+    return dealer_price;
+  }
+
+  const price = item.BARE_PRICE;
+  if (price == null || !Number.isFinite(Number(price)) || Number(price) < 0) {
+    throw new Error(`[get_item_bare_price] invalid bare price for offer_id=${offer_id}`);
+  }
+  return Number(price);
+}
+
+//----------------------------------------------------------------------------------------------
+function get_item_sell_price(item, count) {
+  function return_price(price) {
+    if (price == null || !Number.isFinite(Number(price)) || Number(price) < 0) {
+      throw new Error(`[get_item_sell_price] invalid bare price for offer_id=${offer_id}`);
+    }
+    return Number.parseFloat(price);
+  }
+
+  if (!item) {
+    throw new Error(`[get_item_sell_price] item not found`);
+  }
+
+  const el_select = document.getElementById(`select-item-sell-preset_${index}`);
+  if (!el_select || el_select.disabled) { // no preset - use default sell price
+    return return_price(item.SELL_PRICE);
+  }
+
+  const preset_name = el_select.value;
+  const policy = item.SELL_PRICE_POLICY;
+  const sell_price_rule = policy instanceof Map
+    ? policy.get(preset_name)
+    : policy?.[preset_name];
+
+  if (sell_price_rule && sell_price_rule.length > 0) {
+    for (r of sell_price_rule) {
+      const min = r.min ?? 0;
+      const max = r.max ?? Infinity;
+      if (count >= min && count < max){
+        return return_price(r.price);
+      }
+    }
+    throw new Error('[get_item_sell_price] failed rule calculation');
+  }
+
+  return return_price(item.SELL_PRICE);
+}
+
+//----------------------------------------------------------------------------------------------
 function add_order_terminal(data){
   const user = IdM.get_current_user();
   const ss = user.spreadsheet();
@@ -36,9 +110,58 @@ function add_order_terminal(data){
     throw new Error('[add_order] Sheet not found!');
   }
 
-  const headers = IdM.get_table_header_map_sheet(orderSheet, 1);
+  const headers = IdM.get_table_header_map_sheet(order_sheet, 1);
 
-  const { client_info, payment, notes, total_price, positions } = data;
+  const { _client_info, _payment_id, _notes, _tot_order_price, _positions } = data;
+
+  const timestamp = new Date();
+  const order_id = 'ORD-' + timestamp.getTime();
+
+  // Remove filter if it exists
+  const filter = order_sheet.getFilter();
+  if (filter) { filter.remove(); }
+
+  const last = order_sheet.getLastRow();
+  const position_map = new Map();
+
+  // Insert one row per item position
+  _positions.forEach((pos, index) => {
+
+    const {_offer_id, _item_name, _count, _tot_pos_price} = pos;
+
+    if (position_map.get(order_id) == null){
+      position_map[_offer_id] = build_item(_offer_id);
+    }
+
+    const item_ctx = position_map[_offer_id];
+    const dealer_price = get_item_bare_price(position_map[_offer_id], _count);
+
+    const base_prc = item_ctx.bare_price * _count;
+    const total_profit = _tot_pos_price - base;
+    const dealer_profit = (dealer_price - item_ctx.bare_price) * count;
+    const owner_profit = total_profit - dealer_profit;
+
+    const row_values = [
+      timestamp,                    // timestamp
+      order_id,                     // id
+      _offer_id,                    // articul_id
+      _item_name,                   // articul_name
+      _count,                       // count
+      item_ctx.bare_price,          // supply_price
+      _tot_order_price,             // total_order_price
+      _tot_pos_price,               // total_pos_price
+      base_prc,                     // pos_base
+      owner_profit,                 // owner_profit
+      dealer_profit,                // dealer_profit
+      _client_info,                 // client_info
+      notes,                        // _notes
+      _payment_id,                   // payment
+      'Створено',                   // status
+      user.id
+    ];
+
+    orderSheet.appendRow(row_values);
+  });
 
 }
 
@@ -547,6 +670,99 @@ function build_items() {
 
   //Logger.log("Processed " + compiledResults.length + " items across all chains.");
   return compiledResults;
+}
+
+//----------------------------------------------------------------------------------------------
+function build_item(offer_id) {
+  const user = IdM.get_current_user();
+  const sh = user.sheet("Articuls_v2");
+
+  const data = IdM.deserialize_data(sh);
+
+  const headers = IdM.get_table_header_map_sheet(sh);
+
+  const idx_obj_ctxt = headers['Price rule(PL)'];
+  const idx_object_id = headers['offer_id'];
+
+  // 1. Index all records by key (coerced to string)
+  const itemMap = new Map();
+  data.forEach(row => {
+    const rawId = row[idx_object_id];
+    if (rawId !== undefined && rawId !== null && String(rawId).trim() !== "") {
+      itemMap.set(String(rawId).trim(), row);
+    }
+  });
+
+  // Fast regex to extract var-base attribute
+  function extract_base_id(xmlStr) {
+    if (!xmlStr) return null;
+    const match = xmlStr.match(/var-base=["']([^"']+)["']/i);
+    return match ? match[1].trim() : null;
+  }
+
+  // Caches
+  const contextCache = new Map(); // id -> fully compiled context
+  const visiting = new Set();     // Cycle detection guard
+
+  /**
+   * Evaluates an item by ensuring its base item is evaluated first,
+   * regardless of position in the data array.
+   */
+  function evaluate_item(id) {
+    // Return early if already compiled
+    if (contextCache.has(id)) {
+      return contextCache.get(id);
+    }
+
+    const row = itemMap.get(id);
+    if (!row) return null;
+
+    // Cycle detection guard (A -> B -> A)
+    if (visiting.has(id)) {
+      Logger.log("Warning: Circular dependency detected at offer_id: " + id);
+      return null;
+    }
+    visiting.add(id);
+
+    const rawXml = row[idx_obj_ctxt];
+    const baseId = extract_base_id(rawXml);
+
+    let parentContext = null;
+
+    // If this item has a base item and it exists in the data, resolve base first
+    if (baseId && baseId !== id && itemMap.has(baseId)) {
+      parentContext = evaluate_item(baseId);
+    }
+
+    // Initialize current item's context
+    let context = IdM.fill_item_context_not_null(headers, row);
+    context['CURR_USR_ID'] = user.id;
+    context['CURR_USR_GROUP'] = user.ctx.group;
+    context['CURR_CODE'] = "UAH";
+
+    // Inherit from base item if present
+    if (parentContext) {
+      // Base variables flow down; current row fields take precedence if collisions occur
+      context = Object.assign({}, parentContext, context);
+    }
+
+    let finalXml = rawXml;
+
+    // Execute rule engine on this node
+    if (rawXml && rawXml.trim() !== "") {
+      const result = xflow.process_xml_engine(rawXml, context);
+      context = result.context;
+      finalXml = result.cleanXml;
+    }
+
+    // Cache the resolved context for any future children
+    contextCache.set(id, context);
+    visiting.delete(id);
+
+    return context;
+  }
+
+  return evaluate_item(String(offer_id).trim());
 }
 
 //----------------------------------------------------------------------------------------------
