@@ -160,7 +160,7 @@ function add_order_terminal(data){
       user.id
     ];
 
-    orderSheet.appendRow(row_values);
+    order_sheet.appendRow(row_values);
   });
 
 }
